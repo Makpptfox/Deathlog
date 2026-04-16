@@ -204,6 +204,7 @@ function deadliest_creatures_container.updateMenuElement(
 	deadliest_creatures_container.right:Show()
 	local _stats = stats_tbl["stats"]
 	local _log_normal_params = stats_tbl["log_normal_params"]
+	local selected_source_kind = Deathlog_NormalizeSourceKind(stats_tbl["selected_source_kind"])
 	local valid_map = C_Map.GetMapInfo(current_map_id)
 	if valid_map then
 		deadliest_creatures_container.heading_description:Show()
@@ -519,12 +520,17 @@ function deadliest_creatures_container.updateMenuElement(
 	if metric == "Total Kills" then
 		most_deadly_units = DeathlogGetOrdered(_stats, { "all", map_id, class_id, nil })
 	elseif metric == "Normalized Score" then
-		most_deadly_units = DeathlogGetOrderedNormalized(
-			_stats,
-			{ "all", "all", class_id, nil },
-			_log_normal_params["all"][1][1],
-			_log_normal_params["all"][1][2] * _log_normal_params["all"][1][2]
-		)
+		local normalization_params = _log_normal_params and _log_normal_params["all"] and _log_normal_params["all"][1]
+		if normalization_params then
+			most_deadly_units = DeathlogGetOrderedNormalized(
+				_stats,
+				{ "all", "all", class_id, nil },
+				normalization_params[1],
+				normalization_params[2] * normalization_params[2]
+			)
+		else
+			most_deadly_units = DeathlogGetOrdered(_stats, { "all", map_id, class_id, nil })
+		end
 	end
 
 	local filtered_most_deadly_units = {}
@@ -539,15 +545,19 @@ function deadliest_creatures_container.updateMenuElement(
 
 	if filter == nil then
 		for k, v in ipairs(most_deadly_units) do
-			-- Skip entries without a known creature name (PvP-encoded source_ids, source_id=-1, etc.)
-			if (id_to_npc[v[1]] or deathlog_environment_damage[v[1]]) then
+			local resolved_name = Deathlog_GetSourceNameById(v[1])
+			if resolved_name and resolved_name ~= ""
+				and Deathlog_SourceMatchesKind(v[1], selected_source_kind)
+			then
 				filtered_most_deadly_units[#filtered_most_deadly_units + 1] = v
 			end
 		end
 	else
 		for k, v in ipairs(most_deadly_units) do
-			if
-				filter(id_to_npc[v[1]] or deathlog_environment_damage[v[1]])
+			local resolved_name = Deathlog_GetSourceNameById(v[1])
+			if resolved_name and resolved_name ~= ""
+				and Deathlog_SourceMatchesKind(v[1], selected_source_kind)
+				and filter(resolved_name)
 				and lvlFunction(_stats["all"]["all"]["all"][v[1]]["avg_lvl"])
 			then
 				filtered_most_deadly_units[#filtered_most_deadly_units + 1] = v
@@ -580,18 +590,15 @@ function deadliest_creatures_container.updateMenuElement(
 				deadliest_creatures_textures[i]:SetBackgroundWidth(
 					deadliest_creatures_container:GetWidth() * filtered_most_deadly_units[idx][2] / max_kills
 				)
-				if id_to_npc[filtered_most_deadly_units[idx][1]] ~= nil then
-					deadliest_creatures_textures[i]:SetCreatureName(id_to_npc[filtered_most_deadly_units[idx][1]])
-				elseif deathlog_environment_damage[filtered_most_deadly_units[idx][1]] ~= nil then
-					deadliest_creatures_textures[i]:SetCreatureName(
-						deathlog_environment_damage[filtered_most_deadly_units[idx][1]]
-					)
+				local display_name = Deathlog_GetSourceNameById(filtered_most_deadly_units[idx][1])
+				if display_name and display_name ~= "" then
+					deadliest_creatures_textures[i]:SetCreatureName(display_name)
 				end
 				deadliest_creatures_textures[i]:SetNumKills(filtered_most_deadly_units[idx][2], metric)
 				if valid_map then
 					deadliest_creatures_textures[i]:SetScript("OnMouseDown", function()
 						local c_id = filtered_most_deadly_units[idx][1]
-						local c_name = id_to_npc[c_id] or deathlog_environment_damage[c_id]
+						local c_name = Deathlog_GetSourceNameById(c_id) or ""
 						updateFun(c_id, c_name, function(name)
 							if name == nil then
 								return false

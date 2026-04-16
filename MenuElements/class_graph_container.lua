@@ -31,13 +31,14 @@ function graph_container.updateMenuElement(scroll_frame, class_id, stats_tbl, se
 		model = "Kaplan-Meier"
 	end
 
-	if not DeathlogDataCopy.PRECOMPUTED_KAPLAN_MEIER or not DeathlogDataCopy.PRECOMPUTED_LOG_NORMAL_PARAMS then
+	local log_normal_params = stats_tbl and stats_tbl["log_normal_params"]
+	local class_log_normal_params = log_normal_params and log_normal_params["all"]
+	local kaplan_meier = stats_tbl and stats_tbl["kaplan_meier"]
+	if not class_log_normal_params or not kaplan_meier then
 		graph_container:Hide()
 		return
 	end
 
-	local class_log_normal_params = DeathlogDataCopy.PRECOMPUTED_LOG_NORMAL_PARAMS["all"]
-	local kaplan_meier = DeathlogDataCopy.PRECOMPUTED_KAPLAN_MEIER
 	graph_container:Show()
 	graph_container:SetParent(scroll_frame.frame)
 	graph_container.height = 140
@@ -46,7 +47,7 @@ function graph_container.updateMenuElement(scroll_frame, class_id, stats_tbl, se
 	graph_container.zoomy = 8
 	graph_container.offsety = -30
 	graph_container:ClearAllPoints()
-	graph_container:SetPoint("TOPLEFT", 590, -70)
+	graph_container:SetPoint("TOPLEFT", 590, -95)
 	graph_container:SetWidth(400)
 	graph_container:SetHeight(140)
 	graph_container:SetFrameLevel(15000)

@@ -91,6 +91,8 @@ for _, v in ipairs(average_class_subtitles) do
 	average_class_font_strings["all"][v[1]]:SetTextColor(1, 1, 1, 1)
 end
 
+local getFilteredClassEntry = Deathlog_getFilteredClassEntry
+
 function class_stat_comparison_container.updateMenuElement(
 	scroll_frame,
 	inc_class_id,
@@ -107,25 +109,27 @@ function class_stat_comparison_container.updateMenuElement(
 		view = "Survival"
 	end
 
-	if not DeathlogDataCopy.PRECOMPUTED_KAPLAN_MEIER or not DeathlogDataCopy.PRECOMPUTED_LOG_NORMAL_PARAMS then
+	if not stats_tbl or not stats_tbl["stats"] then
 		class_stat_comparison_container:Hide()
 		return
 	end
 
-	local kaplan_meier = DeathlogDataCopy.PRECOMPUTED_KAPLAN_MEIER
-	local class_log_normal_params = DeathlogDataCopy.PRECOMPUTED_LOG_NORMAL_PARAMS["all"]
 	class_stat_comparison_container:Show()
 	local entry_data = {}
 	local map_id = Deathlog_normalize_map_id_for_stats(Deathlog_ROOT_MAP_ID)
 	local _stats = stats_tbl["stats"]
-	local _log_normal_params = stats_tbl["log_normal_params"]
+	local selected_source_kind = Deathlog_NormalizeSourceKind(stats_tbl["selected_source_kind"])
+	local log_normal_params = stats_tbl["log_normal_params"]
+	local class_log_normal_params = log_normal_params and log_normal_params["all"]
+	local kaplan_meier = stats_tbl["kaplan_meier"]
 	if class_stat_comparison_container.configure_for == "map" and _stats["all"][map_id] == nil then
 		return
 	end
+	local total_map_entry = getFilteredClassEntry(_stats["all"][map_id]["all"], selected_source_kind)
 
 	class_stat_comparison_container:SetParent(scroll_frame.frame)
 	class_stat_comparison_container:ClearAllPoints()
-	class_stat_comparison_container:SetPoint("TOPLEFT", scroll_frame.frame, "TOPLEFT", 0, -100)
+	class_stat_comparison_container:SetPoint("TOPLEFT", scroll_frame.frame, "TOPLEFT", 0, -125)
 	class_stat_comparison_container:SetWidth(600)
 	class_stat_comparison_container:SetHeight(200)
 
@@ -183,8 +187,101 @@ function class_stat_comparison_container.updateMenuElement(
 		class_stat_comparison_container.right:SetTexCoord(0.81, 0.94, 0.5, 1)
 	end
 
+	local function buildClassCurve(class_id)
+		local cdf = {}
+		local contributor_count = 0
+
+		if model == "LogNormal" then
+			if not class_log_normal_params then
+				return nil
+			end
+			if class_id == "all" then
+				for _, candidate_class_id in pairs(Deathlog_class_tbl) do
+					local params = class_log_normal_params[candidate_class_id]
+					if params then
+						local class_cdf = Deathlog_CalculateCDF2(params[1], params[2])
+						contributor_count = contributor_count + 1
+						for i = 1, MAX_PLAYER_LEVEL do
+							cdf[i] = (cdf[i] or 0) + class_cdf[i]
+						end
+					end
+				end
+				if contributor_count == 0 then
+					return nil
+				end
+				for i = 1, MAX_PLAYER_LEVEL do
+					cdf[i] = cdf[i] / contributor_count
+				end
+				return cdf
+			end
+
+			local params = class_log_normal_params[class_id]
+			if not params then
+				return nil
+			end
+			return Deathlog_CalculateCDF2(params[1], params[2])
+		end
+
+		if not kaplan_meier then
+			return nil
+		end
+		if class_id == "all" then
+			for _, candidate_class_id in pairs(Deathlog_class_tbl) do
+				local class_cdf = kaplan_meier[candidate_class_id]
+				if class_cdf then
+					contributor_count = contributor_count + 1
+					for i = 1, MAX_PLAYER_LEVEL do
+						cdf[i] = (cdf[i] or 0) + (class_cdf[i] or class_cdf[60] or 0)
+					end
+				end
+			end
+			if contributor_count == 0 then
+				return nil
+			end
+			for i = 1, MAX_PLAYER_LEVEL do
+				cdf[i] = cdf[i] / contributor_count
+			end
+			return cdf
+		end
+
+		return kaplan_meier[class_id]
+	end
+
+	local function getCurveValue(cdf, x)
+		if not cdf then
+			return nil
+		end
+
+		if view == "Survival" then
+			if model == "LogNormal" then
+				return (1 - (cdf[x] or 0)) * 100
+			end
+			return (cdf[x] or cdf[60] or 0) * 100
+		end
+
+		if view == "Hazard" then
+			if model == "LogNormal" then
+				local current = 1 - (cdf[x] or 0)
+				local previous = 1 - (cdf[x - 10] or 0)
+				if previous <= 0 then
+					return nil
+				end
+				return current / previous * 100
+			end
+
+			local current = cdf[x] or cdf[60] or 0
+			local previous = cdf[x - 10] or cdf[60] or 0
+			if previous <= 0 then
+				return nil
+			end
+			return current / previous * 100
+		end
+
+		return nil
+	end
+
 	local function createEntryData(class_id)
-		local v = _stats["all"][map_id][class_id]
+		local v = getFilteredClassEntry(_stats["all"][map_id][class_id], selected_source_kind)
 		if v == nil then
 			entry_data[class_id] = {}
 			local class_str, _, _ = GetClassInfo(class_id)
@@ -204,113 +301,25 @@ function class_stat_comparison_container.updateMenuElement(
 			end
 			entry_data[class_id] = {}
 			entry_data[class_id]["Class"] = class_str
-			entry_data[class_id]["# Deaths"] = v["all"]["num_entries"]
-			entry_data[class_id]["% of all"] = string.format(
-				"%.1f",
-				v["all"]["num_entries"] / _stats["all"][map_id]["all"]["all"]["num_entries"] * 100.0
-			) .. "%"
-			local cdf = {}
-			local cdf_values = nil
-			if model == "LogNormal" then
-				if class_id == "all" then
-					for i = 1, MAX_PLAYER_LEVEL do
-						cdf[i] = 0
-					end
-					for k, v in pairs(Deathlog_class_tbl) do
-						if class_log_normal_params[v] then
-							local l_cdf =
-								Deathlog_CalculateCDF2(class_log_normal_params[v][1], class_log_normal_params[v][2])
-							for i = 1, MAX_PLAYER_LEVEL do
-								cdf[i] = cdf[i] + l_cdf[i] / 9
-								end
-						end
-					end
-				else
-					if class_log_normal_params[class_id] then
-						cdf = Deathlog_CalculateCDF2(
-							class_log_normal_params[class_id][1],
-							class_log_normal_params[class_id][2]
-						)
-					end
-				end
-				cdf_values = function(x)
-					return 1 - (cdf[x] or 0)
-				end
-			elseif model == "Kaplan-Meier" then
-				if class_id == "all" then
-					for i = 1, MAX_PLAYER_LEVEL do
-						cdf[i] = 0
-					end
-					for k, v in pairs(Deathlog_class_tbl) do
-						local l_cdf = kaplan_meier[v]
-						if l_cdf then
-							for i = 1, MAX_PLAYER_LEVEL do
-								-- Fallback to level 60 value for TBC levels beyond precomputed data
-								local val = l_cdf[i] or l_cdf[60] or 0
-								cdf[i] = cdf[i] + val / 9
-								end
-						end
-					end
-				else
-					cdf = kaplan_meier[class_id]
-				end
-				cdf_values = function(x)
-					-- Fallback to level 60 value for TBC levels beyond precomputed data
-					return cdf[x] or cdf[60] or 0
-				end
-			end
-
-			local viewFunction = nil
-
-			if view == "Survival" then
-				viewFunction = function(cdf_values, x)
-					return cdf_values(x) * 100
-				end
-			elseif view == "Hazard" then
-				viewFunction = function(cdf_values, x)
-					local num = cdf_values(x)
-					local den = cdf_values(x - 10) or 1.0
-					return num / den * 100
-				end
-			end
-
-			if viewFunction == nil then
-				viewFunction = function()
-					return 0
-				end
-			end
-
-			entry_data[class_id]["Avg. Lvl."] = string.format("%.1f", v["all"]["avg_lvl"])
-			for i = 1, steps do
-				entry_data[class_id][tostring(i * 10)] = string.format("%.2f", viewFunction(cdf_values, i * 10)) .. "%"
-			end
-		end
-	end
-
-	local function createEntryDataForCreature(class_id, creature_id)
-		local v = _stats["all"]["all"][class_id]
-		if v == nil or v[creature_id] == nil then
-			entry_data[class_id] = {}
-			local class_str, _, _ = GetClassInfo(class_id)
-			entry_data[class_id]["Class"] = class_str
-			entry_data[class_id]["#"] = "-"
-			entry_data[class_id]["%"] = "-"
-			entry_data[class_id]["Avg."] = "-"
-		else
-			local class_str = ""
-			if class_id ~= "all" then
-				class_str, _, _ = GetClassInfo(class_id)
+			entry_data[class_id]["# Deaths"] = v["num_entries"]
+			if total_map_entry and total_map_entry["num_entries"] > 0 then
+				entry_data[class_id]["% of all"] = string.format(
+					"%.1f",
+					v["num_entries"] / total_map_entry["num_entries"] * 100.0
+				) .. "%"
 			else
-				class_str = "all"
+				entry_data[class_id]["% of all"] = "-"
 			end
-			entry_data[class_id] = {}
-			entry_data[class_id]["Class"] = class_str
-			entry_data[class_id]["#"] = v[creature_id]["num_entries"]
-			entry_data[class_id]["%"] = string.format(
-				"%.1f",
-				v[creature_id]["num_entries"] / _stats["all"]["all"]["all"]["all"]["num_entries"] * 100.0
-			) .. "%"
-			entry_data[class_id]["Avg."] = string.format("%.1f", v[creature_id]["avg_lvl"])
+			entry_data[class_id]["Avg. Lvl."] = string.format("%.1f", v["avg_lvl"])
+			local cdf = buildClassCurve(class_id)
+			for i = 1, steps do
+				local value = getCurveValue(cdf, i * 10)
+				if value ~= nil then
+					entry_data[class_id][tostring(i * 10)] = string.format("%.2f", value) .. "%"
+				else
+					entry_data[class_id][tostring(i * 10)] = "-"
+				end
+			end
 		end
 	end
 

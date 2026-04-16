@@ -74,7 +74,9 @@ local function updateWMOHeatmap(map_id)
 		end
 	end
 
-	local precomputed_heatmap_intensity = DeathNotificationLibDataCopy.HEATMAP_INTENSITY
+	local precomputed_heatmap_intensity = Deathlog_GetHeatmapIntensityForSourceKind(
+		Deathlog_GetWidgetSourceKind(widget_name)
+	)
 	local should_hide = Deathlog_should_hide_heatmap and Deathlog_should_hide_heatmap(map_id)
 	if should_hide or map_id == nil or precomputed_heatmap_intensity == nil or precomputed_heatmap_intensity[map_id] == nil then
 		return
@@ -129,6 +131,7 @@ local defaults = {
 	["enable"] = true,
 	["show_checkbox_on_map"] = true,
 	["granularity"] = "ultra",
+	["source_kind"] = Deathlog_GetDefaultSourceKind(),
 }
 
 local function applyDefaults(_defaults, force)
@@ -146,6 +149,7 @@ local options = {}
 local optionsframe = nil
 function Deathlog_HWMWidget_applySettings()
 	applyDefaults(defaults)
+	last_calculated_map_id = nil
 
 	heatmap_wm_overlay_frame:SetParent(WorldMapButton)
 	heatmap_wm_overlay_frame:ClearAllPoints()
@@ -252,6 +256,21 @@ options = {
 					end
 					heatmap_wm_overlay_frame.heatmap = {}
 				end
+				last_calculated_map_id = nil
+				updateWMOHeatmap(WorldMapFrame:GetMapID())
+			end,
+		},
+		source_kind = {
+			type = "select",
+			name = "Source Filter",
+			desc = "Choose which death source kinds should be shown in the global world map heatmap.",
+			values = Deathlog_GetSourceKindOptions(),
+			sorting = Deathlog_GetSourceKindOptionOrder(),
+			get = function()
+				return Deathlog_GetWidgetSourceKind(widget_name)
+			end,
+			set = function(_, value)
+				deathlog_settings[widget_name]["source_kind"] = value
 				last_calculated_map_id = nil
 				updateWMOHeatmap(WorldMapFrame:GetMapID())
 			end,

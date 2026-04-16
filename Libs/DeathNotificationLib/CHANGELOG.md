@@ -1,5 +1,16 @@
 # Changelog
 
+## V14 — 2026-04-15
+
+### New Features
+- Added public `SOURCE_KIND` constants for shared cause classification across host addons: `all`, `npc`, `environment`, `pvp`, `reported`, and `unknown`
+- Added `DeathNotificationLib.GetSourceKind(source_id)` so host addons can classify source IDs without duplicating NPC, environment, PvP, or reported-source rules
+- Exposed `HEATMAP_INTENSITY_BY_CAUSE` through the DNL data tables for host addons that want per-cause heatmap rendering
+
+### Changes
+- Source-kind classification now lives in the shared library protocol layer as the single source of truth for cause-aware filtering and statistics
+- Added integration coverage for `SOURCE_KIND` exposure and `GetSourceKind` behavior in the DNL test suite
+
 ## V13 — 2026-03-16
 
 ### New Features

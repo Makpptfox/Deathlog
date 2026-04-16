@@ -2,6 +2,29 @@
 
 All notable changes to Deathlog will be documented in this file.
 
+## [0.5.6] - 2026-04-15
+
+### New Features
+- **Shared Cause filter** in the Deathlog menu — one dropdown now drives the Search Log plus Zone, Instance, Creature, and Class statistics from a single selection
+- **Widget source filters** — the Minilog, global heatmap indicator, and world map heatmap overlay now each have a dedicated Source Filter setting
+- **Cause-aware survival models** — class survival graphs and tables now work for specific causes instead of being limited to all-cause precomputes
+
+### Improvements
+- Cause-specific counts, descriptions, and empty states now update across the statistics tabs, including the footer preprocessed total
+- Creature rankings, class comparison tables, and instance summaries now read from the selected-cause dataset instead of mixing in all-cause totals
+- Exported by-cause log-normal and Kaplan-Meier tables now follow the same shipped-data and fallback-cache flow as the rest of the precomputed Deathlog data
+
+### Bug Fixes
+- Fixed instance, creature, and class statistics not redrawing correctly when the Cause filter changed
+- Fixed sparse cause buckets breaking normalized creature rankings by falling back cleanly when a survival model is unavailable
+- Fixed menu layout regressions introduced while consolidating the Cause control beside Watch List
+- Fixed Creature Statistics showing "0.00% of all X deaths are caused by Unknown" when no data exists for the selected creature
+- Fixed PvP deaths showing as "Unknown" in creature statistics and deadliest creature rankings — PvP sources now display the player's race, class, and level
+- Fixed Death Statistics displaying a meaningless "100% of all deaths occur in Azeroth" sentence at the top-level map
+
+### DeathNotificationLib V14
+- Added shared source-kind classification APIs and by-cause heatmap data plumbing used by Deathlog's new Cause filter, cause-aware stats, and per-cause heatmaps
+
 ## [0.5.5] - 2026-03-22
 
 ### Bug Fixes

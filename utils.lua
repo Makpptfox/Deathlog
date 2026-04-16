@@ -24,14 +24,18 @@ DeathlogDataCopy = {}
 if DeathlogData then
 	DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS = DeathlogData.PRECOMPUTED_GENERAL_STATS
 	DeathlogDataCopy.PRECOMPUTED_LOG_NORMAL_PARAMS = DeathlogData.PRECOMPUTED_LOG_NORMAL_PARAMS
+	DeathlogDataCopy.PRECOMPUTED_LOG_NORMAL_PARAMS_BY_CAUSE = DeathlogData.PRECOMPUTED_LOG_NORMAL_PARAMS_BY_CAUSE
 	DeathlogDataCopy.PRECOMPUTED_KAPLAN_MEIER = DeathlogData.PRECOMPUTED_KAPLAN_MEIER
+	DeathlogDataCopy.PRECOMPUTED_KAPLAN_MEIER_BY_CAUSE = DeathlogData.PRECOMPUTED_KAPLAN_MEIER_BY_CAUSE
 	DeathlogDataCopy.PRECOMPUTED_MOST_DEADLY_BY_ZONE = DeathlogData.PRECOMPUTED_MOST_DEADLY_BY_ZONE
+	DeathlogDataCopy.PRECOMPUTED_CAUSE_STATS = DeathlogData.PRECOMPUTED_CAUSE_STATS
 	DeathlogDataCopy.PRECOMPUTED_PURGES = DeathlogData.PRECOMPUTED_PURGES
 end
 
 DeathNotificationLibDataCopy = {}
 if DeathNotificationLibData then
 	DeathNotificationLibDataCopy.HEATMAP_INTENSITY = DeathNotificationLibData.HEATMAP_INTENSITY
+	DeathNotificationLibDataCopy.HEATMAP_INTENSITY_BY_CAUSE = DeathNotificationLibData.HEATMAP_INTENSITY_BY_CAUSE
 	DeathNotificationLibDataCopy.HEATMAP_CREATURE_SUBSET = DeathNotificationLibData.HEATMAP_CREATURE_SUBSET
 end
 
@@ -42,6 +46,45 @@ local zone_to_id = DeathNotificationLib.ZONE_TO_ID
 local deathlog_environment_damage = DeathNotificationLib.ENVIRONMENT_DAMAGE
 
 local MAX_PLAYER_LEVEL = DeathNotificationLib.MAX_PLAYER_LEVEL
+
+local source_kind = DeathNotificationLib.SOURCE_KIND or {
+	ALL = "all",
+	NPC = "npc",
+	ENVIRONMENT = "environment",
+	PVP = "pvp",
+	REPORTED = "reported",
+	UNKNOWN = "unknown",
+}
+local default_source_kind = source_kind.ALL
+
+local source_kind_labels = {
+	[default_source_kind] = "All Causes",
+	[source_kind.NPC] = "NPC",
+	[source_kind.ENVIRONMENT] = "Environment",
+	[source_kind.PVP] = "PvP",
+	[source_kind.REPORTED] = "Reported",
+	[source_kind.UNKNOWN] = "Unknown",
+}
+local source_kind_option_order = {
+	default_source_kind,
+	source_kind.NPC,
+	source_kind.ENVIRONMENT,
+	source_kind.PVP,
+	source_kind.REPORTED,
+}
+
+local source_kind_options = {}
+for _, kind in ipairs(source_kind_option_order) do
+	source_kind_options[kind] = source_kind_labels[kind]
+end
+
+local source_kind_summary_order = {
+	source_kind.NPC,
+	source_kind.PVP,
+	source_kind.ENVIRONMENT,
+	source_kind.REPORTED,
+	source_kind.UNKNOWN,
+}
 
 -- Weak-keyed cache so computed display sources are never saved to SavedVariables.
 -- Keys are entry tables; values are { cached = <string>, predicted = <string|nil> }.
@@ -395,10 +438,7 @@ function DeathlogGetCachedSource(entry)
 
 	local _pvp_source_name = entry["extra_data"] and entry["extra_data"]["pvp_source_name"]
 	local _sid = tonumber(entry["source_id"])
-	local _source = _sid and (id_to_npc[_sid]
-		or deathlog_environment_damage[_sid]
-		or DeathNotificationLib.DecodePvPSource(_sid, _pvp_source_name)
-		or "") or ""
+	local _source = _sid and Deathlog_GetSourceNameById(_sid, _pvp_source_name) or ""
 
 	if _source == "" then
 		if sc.predicted then
@@ -414,6 +454,162 @@ function DeathlogGetCachedSource(entry)
 
 	sc.cached = _source
 	return _source
+end
+
+function Deathlog_GetSourceKindOptions()
+	return source_kind_options
+end
+
+function Deathlog_GetSourceKindConstants()
+	return source_kind
+end
+
+function Deathlog_GetDefaultSourceKind()
+	return default_source_kind
+end
+
+function Deathlog_GetConfiguredSourceKind(settings_tbl, key)
+	if type(settings_tbl) ~= "table" then
+		return default_source_kind
+	end
+	return Deathlog_NormalizeSourceKind(settings_tbl[key or "source_kind"])
+end
+
+function Deathlog_GetWidgetSourceKind(widget_name)
+	return Deathlog_GetConfiguredSourceKind(deathlog_settings and deathlog_settings[widget_name], "source_kind")
+end
+
+function Deathlog_GetSourceKindOptionOrder()
+	return source_kind_option_order
+end
+
+function Deathlog_GetSourceKindSummaryOrder()
+	return source_kind_summary_order
+end
+
+function Deathlog_GetSourceKind(entry_or_source_id)
+	local source_id = entry_or_source_id
+	if type(entry_or_source_id) == "table" then
+		source_id = entry_or_source_id["source_id"]
+	end
+	return DeathNotificationLib.GetSourceKind(source_id)
+end
+
+function Deathlog_GetSourceKindLabel(source_id_or_kind)
+	local kind = source_id_or_kind
+	if source_kind_labels[kind] == nil then
+		kind = Deathlog_GetSourceKind(source_id_or_kind)
+	end
+	return source_kind_labels[kind] or source_kind_labels[source_kind.UNKNOWN]
+end
+
+function Deathlog_NormalizeSourceKind(selected_kind)
+	if not selected_kind or selected_kind == default_source_kind then
+		return default_source_kind
+	end
+	if source_kind_options[selected_kind] ~= nil or selected_kind == source_kind.UNKNOWN then
+		return selected_kind
+	end
+	return default_source_kind
+end
+
+function Deathlog_SourceMatchesKind(entry_or_source_id, selected_kind)
+	selected_kind = Deathlog_NormalizeSourceKind(selected_kind)
+	if selected_kind == default_source_kind then
+		return true
+	end
+	return Deathlog_GetSourceKind(entry_or_source_id) == selected_kind
+end
+
+function Deathlog_GetHeatmapIntensityForSourceKind(selected_kind)
+	selected_kind = Deathlog_NormalizeSourceKind(selected_kind)
+	if selected_kind ~= default_source_kind then
+		local by_cause = DeathNotificationLibDataCopy and DeathNotificationLibDataCopy.HEATMAP_INTENSITY_BY_CAUSE
+		if by_cause then
+			return by_cause[selected_kind]
+		end
+		return nil
+	end
+
+	return DeathNotificationLibDataCopy and DeathNotificationLibDataCopy.HEATMAP_INTENSITY
+end
+
+local function getPrecomputedTableForSourceKind(base_table, by_cause_table, selected_kind)
+	selected_kind = Deathlog_NormalizeSourceKind(selected_kind)
+	if selected_kind ~= default_source_kind and by_cause_table and by_cause_table[selected_kind] then
+		return by_cause_table[selected_kind]
+	end
+	return base_table
+end
+
+function Deathlog_GetLogNormalParamsForSourceKind(selected_kind)
+	return getPrecomputedTableForSourceKind(
+		DeathlogDataCopy and DeathlogDataCopy.PRECOMPUTED_LOG_NORMAL_PARAMS,
+		DeathlogDataCopy and DeathlogDataCopy.PRECOMPUTED_LOG_NORMAL_PARAMS_BY_CAUSE,
+		selected_kind
+	)
+end
+
+function Deathlog_GetKaplanMeierForSourceKind(selected_kind)
+	return getPrecomputedTableForSourceKind(
+		DeathlogDataCopy and DeathlogDataCopy.PRECOMPUTED_KAPLAN_MEIER,
+		DeathlogDataCopy and DeathlogDataCopy.PRECOMPUTED_KAPLAN_MEIER_BY_CAUSE,
+		selected_kind
+	)
+end
+
+--- Aggregate class stats for a selected source kind, shared by all class-stat MenuElements.
+--- Returns nil when there is no data for the given kind.
+function Deathlog_getFilteredClassEntry(class_stats, selected_source_kind)
+	if class_stats == nil then
+		return nil
+	end
+	if selected_source_kind == Deathlog_GetDefaultSourceKind() then
+		return class_stats["all"]
+	end
+
+	local filtered_entry = {
+		num_entries = 0,
+		sum_lvl = 0,
+		avg_lvl = 0,
+	}
+	for source_id, stat_entry in pairs(class_stats) do
+		if source_id ~= "all" and type(stat_entry) == "table" and Deathlog_SourceMatchesKind(source_id, selected_source_kind) then
+			filtered_entry.num_entries = filtered_entry.num_entries + (stat_entry["num_entries"] or 0)
+			filtered_entry.sum_lvl = filtered_entry.sum_lvl + (stat_entry["sum_lvl"] or 0)
+		end
+	end
+	if filtered_entry.num_entries <= 0 then
+		return nil
+	end
+	filtered_entry.avg_lvl = filtered_entry.sum_lvl / filtered_entry.num_entries
+	return filtered_entry
+end
+
+function Deathlog_GetSourceNameById(source_id, pvp_source_name)
+	local source_id_num = tonumber(source_id)
+	if not source_id_num then
+		return ""
+	end
+
+	if id_to_npc[source_id_num] then
+		return id_to_npc[source_id_num]
+	end
+
+	if deathlog_environment_damage[source_id_num] then
+		return deathlog_environment_damage[source_id_num]
+	end
+
+	local pvp_source = DeathNotificationLib.DecodePvPSource(source_id_num, pvp_source_name)
+	if pvp_source and pvp_source ~= "" then
+		return pvp_source
+	end
+
+	if source_id_num == -1 then
+		return Deathlog_GetSourceKindLabel(source_kind.REPORTED)
+	end
+
+	return ""
 end
 
 -- Tue Apr 18 21:36:54 2023
@@ -609,10 +805,6 @@ function DeathlogGetOrderedNormalized(stats, parameters, ln_mean, ln_std_dev)
 	local function normalizeFunc(kills, pr)
 		return kills / pr
 	end
-	local function logNormal(x, mean, sigma)
-		return (1 / (x * sigma * sqrt(2 * 3.14)))
-			* exp((-1 / 2) * ((math.log(x) - mean) / sigma) * ((math.log(x) - mean) / sigma))
-	end
 	local function calculateNormalizedValue(kills, avg_lvl, cdf)
 		if kills < 10 then
 			return 0
@@ -643,21 +835,21 @@ function DeathlogGetOrderedNormalized(stats, parameters, ln_mean, ln_std_dev)
 		end
 	end
 
-	for k, v in pairs(prefix_stats) do
+	for k, entry in pairs(prefix_stats) do
 		if k ~= "all" then
-			local postfix_stats = v
-			for _, v in ipairs(post_parameters) do
-				postfix_stats = postfix_stats[v]
+			local postfix_stats = entry
+			for _, p in ipairs(post_parameters) do
+				postfix_stats = postfix_stats[p]
 			end
 			table.insert(unordered_list, { k, postfix_stats["num_entries"], postfix_stats["avg_lvl"] })
 		end
 	end
-	for i, v in
+	for i, item in
 		spairs(unordered_list, function(t, a, b)
 			return calculateNormalizedValue(t[b][2], t[b][3], cdf) < calculateNormalizedValue(t[a][2], t[a][3], cdf)
 		end)
 	do
-		table.insert(ordered, { v[1], calculateNormalizedValue(v[2], v[3], cdf) })
+		table.insert(ordered, { item[1], calculateNormalizedValue(item[2], item[3], cdf) })
 	end
 	return ordered
 end
@@ -669,38 +861,38 @@ function DeathlogGetOrdered(stats, parameters)
 	local prefix_stats = stats
 	local post_parameters = {}
 	local active = false
-	for _, v in ipairs(parameters) do
+	for _, param in ipairs(parameters) do
 		if active then
-			post_parameters[#post_parameters + 1] = v
+			post_parameters[#post_parameters + 1] = param
 		else
-			if v == nil then
+			if param == nil then
 				active = true
 			else
-				if prefix_stats[v] == nil then
+				if prefix_stats[param] == nil then
 					return nil
 				end
-				prefix_stats = prefix_stats[v]
+				prefix_stats = prefix_stats[param]
 			end
 		end
 	end
 
-	for k, v in pairs(prefix_stats) do
+	for k, entry in pairs(prefix_stats) do
 		if k ~= "all" then
-			local postfix_stats = v
-			for _, v in ipairs(post_parameters) do
-				postfix_stats = postfix_stats[v]
+			local postfix_stats = entry
+			for _, p in ipairs(post_parameters) do
+				postfix_stats = postfix_stats[p]
 			end
 			if k ~= -1 then
 				table.insert(unordered_list, { k, postfix_stats["num_entries"] })
 			end
 		end
 	end
-	for i, v in
+	for _, item in
 		spairs(unordered_list, function(t, a, b)
 			return t[b][2] < t[a][2]
 		end)
 	do
-		table.insert(ordered, v)
+		table.insert(ordered, item)
 	end
 	return ordered
 end
@@ -873,7 +1065,11 @@ function Deathlog_calculate_statistics(_deathlog_data)
 	end
 
 	for k, v in ipairs(metadata_list) do
-		v["avg_lvl"] = v["sum_lvl"] / v["num_entries"]
+		if v["num_entries"] > 0 then
+			v["avg_lvl"] = v["sum_lvl"] / v["num_entries"]
+		else
+			v["avg_lvl"] = 0
+		end
 	end
 
 	-- local ordered = DeathlogGetOrdered(stats, {"all", "all", "all", nil})
@@ -901,13 +1097,13 @@ function Deathlog_serializeTable(val, name, skipnewlines, depth)
 	end
 
 	if type(val) == "table" then
-		tmp = tmp .. "{" .. (not skipnewlines and "" or "")
+		tmp = tmp .. "{" .. (not skipnewlines and "\n" or "")
 
 		for k, v in pairs(val) do
 			tmp = tmp
 				.. Deathlog_serializeTable(v, k, skipnewlines, depth + 1)
 				.. ","
-				.. (not skipnewlines and "" or "")
+				.. (not skipnewlines and "\n" or "")
 		end
 
 		tmp = tmp .. string.rep(" ", depth) .. "}"
@@ -1020,9 +1216,33 @@ function Deathlog_calculateLogNormalParameters(_deathlog_data)
 	return log_normal_params
 end
 
+local function filterDeathlogDataBySourceKind(_deathlog_data, selected_source_kind)
+	return DeathlogFilter(_deathlog_data, function(_, entry)
+		return Deathlog_SourceMatchesKind(entry, selected_source_kind)
+	end)
+end
+
+function Deathlog_calculateLogNormalParametersByCause(_deathlog_data)
+	local log_normal_params_by_cause = {}
+	log_normal_params_by_cause[default_source_kind] = Deathlog_calculateLogNormalParameters(_deathlog_data)
+
+	for _, kind in ipairs(source_kind_summary_order) do
+		log_normal_params_by_cause[kind] =
+			Deathlog_calculateLogNormalParameters(filterDeathlogDataBySourceKind(_deathlog_data, kind))
+	end
+
+	return log_normal_params_by_cause
+end
+
 -- Kaplan-Meier computation is disabled (requires statistical library not available in Lua).
 -- The Python preprocessor also has this commented out; the precomputed data ships as {}.
 function Deathlog_calculateKaplanMeier(_deathlog_data)
+	return {}
+end
+
+function Deathlog_calculateKaplanMeierByCause(_deathlog_data)
+	-- Kaplan-Meier is disabled (stub returns {}), so skip the expensive
+	-- filterDeathlogDataBySourceKind work and just return an empty table.
 	return {}
 end
 
@@ -1081,6 +1301,86 @@ function Deathlog_calculateMostDeadlyByZone(_deathlog_data)
 	end
 
 	return most_deadly_by_zone
+end
+
+local function createCauseStatsEntry()
+	return {
+		total = 0,
+		[source_kind.NPC] = 0,
+		[source_kind.ENVIRONMENT] = 0,
+		[source_kind.PVP] = 0,
+		[source_kind.REPORTED] = 0,
+		[source_kind.UNKNOWN] = 0,
+		top_sources = {},
+		source_counts = {
+			[source_kind.NPC] = {},
+			[source_kind.ENVIRONMENT] = {},
+			[source_kind.PVP] = {},
+			[source_kind.REPORTED] = {},
+			[source_kind.UNKNOWN] = {},
+		},
+	}
+end
+
+local function ensureCauseStatsEntry(cause_stats, map_id)
+	if cause_stats[map_id] == nil then
+		cause_stats[map_id] = createCauseStatsEntry()
+	end
+	return cause_stats[map_id]
+end
+
+local function updateCauseStatsEntry(cause_stats_entry, source_id, kind)
+	kind = kind or source_kind.UNKNOWN
+	cause_stats_entry.total = cause_stats_entry.total + 1
+	cause_stats_entry[kind] = (cause_stats_entry[kind] or 0) + 1
+
+	if source_id == nil then
+		return
+	end
+
+	local source_counts = cause_stats_entry.source_counts[kind]
+	if source_counts == nil then
+		source_counts = {}
+		cause_stats_entry.source_counts[kind] = source_counts
+	end
+
+	source_counts[source_id] = (source_counts[source_id] or 0) + 1
+	local top_source_id = cause_stats_entry.top_sources[kind]
+	if top_source_id == nil or source_counts[source_id] > (source_counts[top_source_id] or 0) then
+		cause_stats_entry.top_sources[kind] = source_id
+	end
+end
+
+function Deathlog_calculateCauseStats(_deathlog_data)
+	local cause_stats = {}
+
+	for _, entry_tbl in pairs(_deathlog_data) do
+		for _, entry in pairs(entry_tbl) do
+			if Deathlog_shouldShowEntry(entry) then
+				local source_id = tonumber(entry["source_id"])
+				local kind = Deathlog_GetSourceKind(source_id)
+				local entry_map_id = entry["map_id"] or entry["instance_id"] or "all"
+				local zones_to_update = Deathlog_get_zone_ancestors(entry_map_id)
+
+				for _, zone_id in ipairs(zones_to_update) do
+					local cause_stats_entry = ensureCauseStatsEntry(cause_stats, zone_id)
+					updateCauseStatsEntry(cause_stats_entry, source_id, kind)
+				end
+
+				local instance_id = entry["instance_id"]
+				if instance_id and all_instance_id_set[instance_id] then
+					local all_instances_entry = ensureCauseStatsEntry(cause_stats, Deathlog_ALL_INSTANCES_ID)
+					updateCauseStatsEntry(all_instances_entry, source_id, kind)
+				end
+			end
+		end
+	end
+
+	for _, cause_stats_entry in pairs(cause_stats) do
+		cause_stats_entry.source_counts = nil
+	end
+
+	return cause_stats
 end
 
 -- Return the local purge list. The Python preprocessor aggregates purges from
@@ -1237,6 +1537,30 @@ function Deathlog_calculateHeatmapIntensity(skull_locs)
 		end
 	end
 	return heatmap
+end
+
+function Deathlog_calculateHeatmapIntensityByCause(skull_locs)
+	local skull_locs_by_cause = {}
+
+	for mapid, deaths in pairs(skull_locs) do
+		for _, death in ipairs(deaths) do
+			local kind = Deathlog_GetSourceKind(death[3])
+			if skull_locs_by_cause[kind] == nil then
+				skull_locs_by_cause[kind] = {}
+			end
+			if skull_locs_by_cause[kind][mapid] == nil then
+				skull_locs_by_cause[kind][mapid] = {}
+			end
+			skull_locs_by_cause[kind][mapid][#skull_locs_by_cause[kind][mapid] + 1] = death
+		end
+	end
+
+	local intensity_by_cause = {}
+	for kind, skulls in pairs(skull_locs_by_cause) do
+		intensity_by_cause[kind] = Deathlog_calculateHeatmapIntensity(skulls)
+	end
+
+	return intensity_by_cause
 end
 
 function Deathlog_calculateHeatmapCreatureSubset(skull_locs)

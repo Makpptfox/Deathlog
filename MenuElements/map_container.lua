@@ -1173,6 +1173,7 @@ end
 
 function map_container.updateMenuElement(scroll_frame, current_map_id, stats_tbl, setMapRegion)
 	-- local _skull_locs = stats_tbl["skull_locs"]
+	local selected_source_kind = Deathlog_NormalizeSourceKind(stats_tbl["selected_source_kind"])
 	this_map_id = current_map_id
 	if scroll_frame.frame then
 		map_container:SetParent(scroll_frame.frame)
@@ -1388,7 +1389,7 @@ function map_container.updateMenuElement(scroll_frame, current_map_id, stats_tbl
 	end
 
 	local should_hide = Deathlog_should_hide_heatmap and Deathlog_should_hide_heatmap(current_map_id)
-	local precomputed_heatmap_intensity = DeathNotificationLibDataCopy.HEATMAP_INTENSITY
+	local precomputed_heatmap_intensity = Deathlog_GetHeatmapIntensityForSourceKind(selected_source_kind)
 	if not should_hide and precomputed_heatmap_intensity and precomputed_heatmap_intensity[current_map_id] ~= nil then
 		local checked = map_container.heatmap_checkbox and map_container.heatmap_checkbox:GetChecked()
 		-- Bucket the data into the current granularity

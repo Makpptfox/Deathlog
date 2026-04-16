@@ -53,8 +53,94 @@ local cached_filter_version = 0  -- Incremented when filters change
 local _auto_refresh_ticker = nil
 local _get_filters_active = nil  -- Set by drawLogTab; returns true if any filter is active
 local _get_active_filter = nil   -- Set by drawLogTab; returns the current filter function
+local current_menu_group = "LogTab"
+local current_creature_stats_source_id = 40
+local current_creature_stats_source_name = "Kobold Miner"
+local current_class_stats_class_id = 1
+local current_class_stats_class_name = "Warrior"
+local current_class_stats_model = "LogNormal"
+local current_class_stats_view = "Survival"
+local Deathlog_GetMenuPreprocessedTotal
 
 local deathlog_menu ---@type AceGUIDeathlogMenu
+
+local function Deathlog_GetMenuSourceKind()
+	if deathlog_settings == nil then
+		return Deathlog_GetDefaultSourceKind()
+	end
+
+	if deathlog_settings["menu_source_kind"] == nil then
+		local default_source_kind = Deathlog_GetDefaultSourceKind()
+		local selected_search_kind = Deathlog_GetConfiguredSourceKind(deathlog_settings, "search_log_source_kind")
+		local selected_stats_kind = Deathlog_GetConfiguredSourceKind(deathlog_settings, "stats_cause_kind")
+		if selected_search_kind ~= default_source_kind then
+			deathlog_settings["menu_source_kind"] = selected_search_kind
+		elseif selected_stats_kind ~= default_source_kind then
+			deathlog_settings["menu_source_kind"] = selected_stats_kind
+		else
+			deathlog_settings["menu_source_kind"] = default_source_kind
+		end
+	end
+
+	return Deathlog_GetConfiguredSourceKind(deathlog_settings, "menu_source_kind")
+end
+
+local function Deathlog_SetMenuSourceKind(selected_kind)
+	if deathlog_settings == nil then
+		return
+	end
+
+	local normalized_kind = Deathlog_NormalizeSourceKind(selected_kind)
+	deathlog_settings["menu_source_kind"] = normalized_kind
+	deathlog_settings["search_log_source_kind"] = normalized_kind
+	deathlog_settings["stats_cause_kind"] = normalized_kind
+end
+
+local function Deathlog_UpdateMenuSourceKindControl()
+	if deathlog_menu == nil or deathlog_menu.footer_source_kind_dd == nil then
+		return
+	end
+
+	UIDropDownMenu_SetText(
+		deathlog_menu.footer_source_kind_dd,
+		Deathlog_GetSourceKindOptions()[Deathlog_GetMenuSourceKind()] or "All Causes"
+	)
+end
+
+local function Deathlog_LayoutMenuSourceKindControl()
+	if
+		deathlog_menu == nil
+		or deathlog_menu.footer_source_kind_dd == nil
+		or deathlog_menu.footer_source_kind_label == nil
+		or deathlog_tabcontainer == nil
+		or deathlog_tabcontainer.tabs == nil
+	then
+		return
+	end
+
+	local watch_list_tab = nil
+	for _, tab in pairs(deathlog_tabcontainer.tabs) do
+		if tab and tab.value == "WatchListTab" and tab:IsShown() then
+			watch_list_tab = tab
+			break
+		end
+	end
+
+	deathlog_menu.footer_source_kind_dd:ClearAllPoints()
+	deathlog_menu.footer_source_kind_label:ClearAllPoints()
+	deathlog_menu.statustext:ClearAllPoints()
+
+	if watch_list_tab then
+		deathlog_menu.footer_source_kind_dd:SetPoint("RIGHT", watch_list_tab, "LEFT", 16, -2)
+		deathlog_menu.footer_source_kind_label:SetPoint("LEFT", deathlog_menu.footer_source_kind_dd, "LEFT", 20, 20)
+	else
+		deathlog_menu.footer_source_kind_dd:SetPoint("TOPRIGHT", deathlog_menu.frame, "TOPRIGHT", -350, -42)
+		deathlog_menu.footer_source_kind_label:SetPoint("LEFT", deathlog_menu.footer_source_kind_dd, "LEFT", 20, 20)
+	end
+
+	deathlog_menu.statustext:SetPoint("BOTTOMRIGHT", deathlog_menu.frame, "BOTTOMRIGHT", -30, 10)
+	deathlog_menu.statustext:SetWidth(420)
+end
 
 local WorldMapButton = WorldMapFrame:GetCanvas()
 local death_tomb_frame = CreateFrame("frame", nil, WorldMapButton)
@@ -450,7 +536,7 @@ local function setDeathlogMenuLogData(data)
 		end
 	end
 
-	local total_str = (DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS and DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS["all"] and DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS["all"]["all"] and DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS["all"]["all"]["all"] and DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS["all"]["all"]["all"]["all"] and DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS["all"]["all"]["all"]["all"]["num_entries"]) or "?"
+	local total_str = Deathlog_GetMenuPreprocessedTotal()
 
 	if #ordered == 1 then
 		deathlog_menu:SetStatusText(
@@ -472,7 +558,74 @@ end
 local _deathlog_data = {}
 local _stats = {}
 local _log_normal_params = {}
+local _cause_stats = {}
 local initialized = false
+
+Deathlog_GetMenuPreprocessedTotal = function()
+	local all_cause_stats = _cause_stats and _cause_stats["all"]
+	if all_cause_stats then
+		local selected_kind = Deathlog_GetMenuSourceKind()
+		if selected_kind ~= Deathlog_GetDefaultSourceKind() then
+			return all_cause_stats[selected_kind] or 0
+		end
+		return all_cause_stats.total or 0
+	end
+
+	return (DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS and DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS["all"]
+		and DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS["all"]["all"]
+		and DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS["all"]["all"]["all"]
+		and DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS["all"]["all"]["all"]["all"]
+		and DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS["all"]["all"]["all"]["all"]["num_entries"]) or "?"
+end
+
+local function Deathlog_GetCauseStatsCount(cause_stats_entry)
+	if cause_stats_entry == nil then
+		return 0
+	end
+
+	local selected_kind = Deathlog_GetMenuSourceKind()
+	if selected_kind ~= Deathlog_GetDefaultSourceKind() then
+		return cause_stats_entry[selected_kind] or 0
+	end
+
+	return cause_stats_entry.total or 0
+end
+
+local function Deathlog_GetSelectedCauseDescriptor()
+	local selected_kind = Deathlog_GetMenuSourceKind()
+	if selected_kind ~= Deathlog_GetDefaultSourceKind() then
+		return Deathlog_GetSourceKindLabel(selected_kind) .. " deaths"
+	end
+	return "deaths"
+end
+
+local function Deathlog_GetSourceStatsCount(source_id)
+	local source_stats = _stats
+		and _stats["all"]
+		and _stats["all"]["all"]
+		and _stats["all"]["all"]["all"]
+		and _stats["all"]["all"]["all"][source_id]
+	if source_stats == nil then
+		return 0
+	end
+
+	local selected_kind = Deathlog_GetMenuSourceKind()
+	if selected_kind ~= Deathlog_GetDefaultSourceKind() and not Deathlog_SourceMatchesKind(source_id, selected_kind) then
+		return 0
+	end
+
+	return source_stats["num_entries"] or 0
+end
+
+local function refreshMenuSearchResults(skipPageReset)
+	clearDeathlogMenuLogData(skipPageReset)
+	local active_filter = _get_active_filter and _get_active_filter()
+	if active_filter and (_get_filters_active and _get_filters_active()) then
+		setDeathlogMenuLogData(DeathlogFilter(_deathlog_data, active_filter))
+	else
+		setDeathlogMenuLogData(_deathlog_data)
+	end
+end
 
 local function drawLogTab(container)
 	local scroll_container = AceGUI:Create("SimpleGroup") ---@type AceGUISimpleGroup
@@ -525,6 +678,12 @@ local function drawLogTab(container)
 				return false
 			end
 		end
+		if
+			Deathlog_GetMenuSourceKind() ~= Deathlog_GetDefaultSourceKind()
+			and not Deathlog_SourceMatchesKind(_entry, Deathlog_GetMenuSourceKind())
+		then
+			return false
+		end
 		if class_filter ~= nil then
 			if class_filter(server_name, _entry) == false then
 				return false
@@ -564,6 +723,7 @@ local function drawLogTab(container)
 			or race_filter ~= nil or zone_filter ~= nil or guild_filter ~= nil
 			or min_level_filter ~= nil or max_level_filter ~= nil
 			or death_source_filter ~= nil or last_words_filter ~= nil
+			or Deathlog_GetMenuSourceKind() ~= Deathlog_GetDefaultSourceKind()
 			or death_filter_mode ~= "all"
 	end
 	_get_active_filter = function() return filter end
@@ -1556,7 +1716,7 @@ local function drawLogTab(container)
 		font_container.last_words_check_box.text = font_container:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 	end
 
-	font_container.last_words_check_box:SetPoint("TOPLEFT", font_container.death_filter_dd, "BOTTOMLEFT", 16, 5)
+	font_container.last_words_check_box:SetPoint("TOPLEFT", font_container.death_filter_dd, "BOTTOMLEFT", 0, 8)
 	font_container.last_words_check_box:SetChecked(false)
 	font_container.last_words_check_box:SetScript("OnClick", function()
 		if font_container.last_words_check_box:GetChecked() == true then
@@ -1853,7 +2013,7 @@ local function drawWatchListTab(container)
 end
 
 local function drawCreatureStatisticsTab(container)
-	local current_creature_id = nil
+	local current_creature_id = current_creature_stats_source_id
 	local update_functions = {}
 	local scroll_container = AceGUI:Create("SimpleGroup") ---@type AceGUISimpleGroup
 	scroll_container:SetFullWidth(true)
@@ -1882,20 +2042,38 @@ local function drawCreatureStatisticsTab(container)
 	description_label.label:SetJustifyH("CENTER")
 	scroll_frame:AddChild(description_label)
 	local function modifyDescription(creature_id)
-		local c_id = creature_id
-		local deaths_by_creature = 0
-		if _stats["all"]["all"]["all"][creature_id] then
-			deaths_by_creature = _stats["all"]["all"]["all"][creature_id]["num_entries"]
+		local deaths_by_creature = Deathlog_GetSourceStatsCount(creature_id)
+		if not deaths_by_creature or deaths_by_creature == 0 then
+			description_label:SetText("")
+			return
 		end
-		local all_deaths = _stats["all"]["all"]["all"]["all"]["num_entries"]
-		local creature_name = id_to_npc[creature_id] or deathlog_environment_damage[creature_id] or "Unknown"
+		local all_deaths = Deathlog_GetCauseStatsCount(_cause_stats["all"])
+		local creature_pct = 0
+		if all_deaths and all_deaths > 0 then
+			creature_pct = deaths_by_creature / all_deaths * 100
+		end
+		local creature_name = Deathlog_GetSourceNameById(creature_id)
+		if creature_name == "" then creature_name = "Unknown" end
 		description_label:SetText(
-			string.format("%.2f", deaths_by_creature / all_deaths * 100)
-				.. "% of all deaths are caused by "
+			string.format("%.2f", creature_pct)
+				.. "% of all "
+				.. Deathlog_GetSelectedCauseDescriptor()
+				.. " are caused by "
 				.. creature_name
 				.. "."
 		)
 	end
+
+	local no_data_frame = CreateFrame("Frame", nil, scroll_frame.frame)
+	no_data_frame:SetSize(300, 100)
+	no_data_frame:SetPoint("TOPRIGHT", scroll_frame.frame, "TOPRIGHT", -80, -250)
+	no_data_frame:Hide()
+
+	local no_data_text = no_data_frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+	no_data_text:SetPoint("CENTER", no_data_frame, "CENTER", 0, 0)
+	no_data_text:SetFont(Deathlog_L.menu_font, 16, "")
+	no_data_text:SetTextColor(0.6, 0.6, 0.6, 1)
+	no_data_text:SetText("No death data available\nfor this source yet.")
 
 	local stats_menu_elements = {
 		Deathlog_CreatureModelContainer(),
@@ -1906,31 +2084,84 @@ local function drawCreatureStatisticsTab(container)
 	stats_menu_elements[2].configure_for = "creature"
 
 	local function updateElements(creature_id, name, filter)
-		current_creature_id = creature_id
-		if name then
-			modifyTitle(name)
-			modifyDescription(current_creature_id)
+		current_creature_id = creature_id or current_creature_stats_source_id
+
+		-- If the selected creature doesn't match the current source kind filter,
+		-- auto-select the top creature for this kind
+		local selected_source_kind = Deathlog_GetMenuSourceKind()
+		if
+			selected_source_kind ~= Deathlog_GetDefaultSourceKind()
+			and not Deathlog_SourceMatchesKind(current_creature_id, selected_source_kind)
+		then
+			local map_id = Deathlog_normalize_map_id_for_stats(Deathlog_ROOT_MAP_ID)
+			local ordered = _stats and DeathlogGetOrdered(_stats, { "all", map_id, "all", nil })
+			if ordered then
+				for _, v in ipairs(ordered) do
+					if Deathlog_SourceMatchesKind(v[1], selected_source_kind) then
+						current_creature_id = v[1]
+						local resolved = Deathlog_GetSourceNameById(v[1])
+						name = (resolved ~= "" and resolved) or "Unknown"
+						break
+					end
+				end
+			end
+		end
+
+		current_creature_stats_source_id = current_creature_id
+		if not name or name == "" then
+			local resolved = Deathlog_GetSourceNameById(current_creature_id)
+			name = (resolved ~= "" and resolved) or nil
+		end
+		current_creature_stats_source_name = name
+			or current_creature_stats_source_name
+			or "Unknown"
+		modifyTitle(current_creature_stats_source_name)
+		modifyDescription(current_creature_id)
+
+		local selected_cause_label = Deathlog_GetSourceKindLabel(selected_source_kind)
+		if selected_source_kind ~= Deathlog_GetDefaultSourceKind() then
+			no_data_text:SetText("No " .. selected_cause_label .. " death data available\nfor this source yet.")
+		else
+			no_data_text:SetText("No death data available\nfor this source yet.")
 		end
 		local stats_tbl = {
 			["stats"] = _stats,
-			["log_normal_params"] = _log_normal_params,
+			["log_normal_params"] = Deathlog_GetLogNormalParamsForSourceKind(selected_source_kind),
+			["selected_source_kind"] = selected_source_kind,
 		}
-		for _, v in ipairs(stats_menu_elements) do
-			v.updateMenuElement(scroll_frame, current_creature_id, stats_tbl, updateElements, filter)
+
+		stats_menu_elements[4].updateMenuElement(scroll_frame, current_creature_id, stats_tbl, updateElements, filter)
+		stats_menu_elements[4]:Show()
+
+		if Deathlog_GetSourceStatsCount(current_creature_id) > 0 then
+			no_data_frame:Hide()
+			for i = 1, 3 do
+				stats_menu_elements[i].updateMenuElement(scroll_frame, current_creature_id, stats_tbl, updateElements, filter)
+				stats_menu_elements[i]:Show()
+			end
+		else
+			for i = 1, 3 do
+				stats_menu_elements[i]:Hide()
+			end
+			no_data_frame:Show()
 		end
 	end
 
-	updateElements(40, "Kobold Miner")
+	updateElements(current_creature_stats_source_id, current_creature_stats_source_name)
 
 	scroll_frame.frame:HookScript("OnHide", function()
 		for _, v in ipairs(stats_menu_elements) do
 			v:Hide()
 		end
+		no_data_frame:Hide()
 	end)
 end
 
 local function drawStatisticsTab(container)
 	local update_functions = {}
+	local source_kind_summary_order = Deathlog_GetSourceKindSummaryOrder()
+	local current_zone_name = Deathlog_ROOT_MAP_NAME
+	local setMapRegion
 	local scroll_container = AceGUI:Create("SimpleGroup") ---@type AceGUISimpleGroup
 	scroll_container:SetFullWidth(true)
 	scroll_container:SetFullHeight(true)
@@ -1957,16 +2188,88 @@ local function drawStatisticsTab(container)
 	description_label.label:SetTextColor(0.6, 0.6, 0.6, 1.0)
 	description_label.label:SetJustifyH("CENTER")
 	scroll_frame:AddChild(description_label)
+
+	local function buildCauseBreakdown(cause_stats_entry)
+		if not cause_stats_entry or not cause_stats_entry.total or cause_stats_entry.total <= 0 then
+			return ""
+		end
+
+		local parts = {}
+		for _, kind in ipairs(source_kind_summary_order) do
+			local count = cause_stats_entry[kind] or 0
+			if count > 0 then
+				parts[#parts + 1] = string.format(
+					"%s %.0f%%",
+					Deathlog_GetSourceKindLabel(kind),
+					(count / cause_stats_entry.total) * 100
+				)
+			end
+		end
+
+		return table.concat(parts, ", ")
+	end
+
+	local function getTopSourceCallout(cause_stats_entry)
+		if not cause_stats_entry or not cause_stats_entry.top_sources then
+			return ""
+		end
+
+		---@type DNL_SOURCE_KIND|nil
+		local leader_kind = Deathlog_GetMenuSourceKind()
+		if leader_kind == Deathlog_GetDefaultSourceKind() or (cause_stats_entry[leader_kind] or 0) <= 0 then
+			leader_kind = nil
+			local best_count = 0
+			for _, kind in ipairs(source_kind_summary_order) do
+				local count = cause_stats_entry[kind] or 0
+				if count > best_count then
+					best_count = count
+					leader_kind = kind
+				end
+			end
+		end
+
+		if not leader_kind then
+			return ""
+		end
+
+		local top_source_id = cause_stats_entry.top_sources[leader_kind]
+		if top_source_id == nil then
+			return ""
+		end
+
+		local top_source_name = Deathlog_GetSourceNameById(top_source_id)
+		if top_source_name == "" then
+			top_source_name = Deathlog_GetSourceKindLabel(leader_kind)
+		end
+
+		return string.format("Top %s: %s", Deathlog_GetSourceKindLabel(leader_kind), top_source_name)
+	end
+
 	local function modifyDescription(map_id, zone)
 		local mid = Deathlog_normalize_map_id_for_stats(map_id)
-		local deaths_in_zone = 0
-		if _stats["all"][mid] then
-			deaths_in_zone = _stats["all"][mid]["all"]["all"]["num_entries"]
+		local deaths_in_zone = Deathlog_GetCauseStatsCount(_cause_stats[mid])
+		local all_deaths = Deathlog_GetCauseStatsCount(_cause_stats["all"])
+		local zone_pct = 0
+		if all_deaths and all_deaths > 0 then
+			zone_pct = deaths_in_zone / all_deaths * 100
 		end
-		local all_deaths = _stats["all"]["all"]["all"]["all"]["num_entries"]
-		description_label:SetText(
-			string.format("%.2f", deaths_in_zone / all_deaths * 100) .. "% of all deaths occur in " .. zone .. "."
-		)
+		local cause_stats_entry = _cause_stats[mid]
+		local cause_breakdown = buildCauseBreakdown(cause_stats_entry)
+		local top_source_callout = getTopSourceCallout(cause_stats_entry)
+		local description_parts = {}
+		-- Skip the trivial "100% occur in Azeroth" when at root map
+		local is_root = (map_id == Deathlog_ROOT_MAP_ID)
+		if not is_root then
+			description_parts[#description_parts + 1] =
+				string.format("%.2f", zone_pct) .. "% of all " .. Deathlog_GetSelectedCauseDescriptor() .. " occur in " .. zone .. "."
+		end
+		if cause_breakdown ~= "" then
+			description_parts[#description_parts + 1] = cause_breakdown .. "."
+		end
+		if top_source_callout ~= "" then
+			description_parts[#description_parts + 1] = top_source_callout .. "."
+		end
+		description_label:SetText(table.concat(description_parts, " "))
 	end
 
 	-- Create "no data" message frame
@@ -1990,20 +2293,29 @@ local function drawStatisticsTab(container)
 
 	stats_menu_elements[3].configure_for = "map"
 
-	local function setMapRegion(map_id, name)
+	setMapRegion = function(map_id, name)
 		current_map_id = map_id
 		if name then
+			current_zone_name = name
 			modifyTitle(name)
 			modifyDescription(map_id, name)
 		end
+		local selected_source_kind = Deathlog_GetMenuSourceKind()
+		local selected_cause_label = Deathlog_GetSourceKindLabel(selected_source_kind)
+		if selected_source_kind ~= Deathlog_GetDefaultSourceKind() then
+			no_data_text:SetText("No " .. selected_cause_label .. " death data available\nfor this zone yet.")
+		else
+			no_data_text:SetText("No death data available\nfor this zone yet.")
+		end
 		local stats_tbl = {
 			["stats"] = _stats,
-			["log_normal_params"] = _log_normal_params,
+			["log_normal_params"] = Deathlog_GetLogNormalParamsForSourceKind(selected_source_kind),
+			["selected_source_kind"] = selected_source_kind,
 		}
 
 		-- Check if data exists for this zone
 		local mid = Deathlog_normalize_map_id_for_stats(map_id)
-		local has_data = _stats and _stats["all"] and _stats["all"][mid]
+		local has_data = Deathlog_GetCauseStatsCount(_cause_stats[mid]) > 0
 
 		if has_data then
 			-- Show stats elements, hide no data message
@@ -2055,6 +2367,14 @@ local function drawClassStatisticsTab(container)
 		title_label:SetText("Death Statistics - " .. zone)
 	end
 
+	local description_label = AceGUI:Create("Label") ---@type AceGUILabel
+	description_label:SetFullWidth(true)
+	description_label:SetText("")
+	description_label.label:SetFont(Deathlog_L.menu_font, 14, "")
+	description_label.label:SetTextColor(0.6, 0.6, 0.6, 1.0)
+	description_label.label:SetJustifyH("CENTER")
+	scroll_frame:AddChild(description_label)
+
 	local stats_menu_elements = {
 		Deathlog_ClassGraphContainer(),
 		Deathlog_ClassStatsContainer(),
@@ -2064,19 +2384,74 @@ local function drawClassStatisticsTab(container)
 
 	local function setMapRegion(map_id, name, model, view)
 		current_map_id = map_id
-		if name then
-			modifyTitle(name)
+		current_class_stats_class_id = map_id or current_class_stats_class_id
+		current_class_stats_class_name = name or current_class_stats_class_name or "Warrior"
+		current_class_stats_model = model or current_class_stats_model
+		current_class_stats_view = view or current_class_stats_view
+		modifyTitle(current_class_stats_class_name)
+
+		local selected_source_kind = Deathlog_GetMenuSourceKind()
+		if selected_source_kind ~= Deathlog_GetDefaultSourceKind() then
+			description_label:SetText(
+				"Showing class survival for "
+					.. Deathlog_GetSourceKindLabel(selected_source_kind)
+					.. " deaths."
+			)
+		else
+			description_label:SetText("")
 		end
 		local stats_tbl = {
 			["stats"] = _stats,
-			["log_normal_params"] = _log_normal_params,
+			["log_normal_params"] = Deathlog_GetLogNormalParamsForSourceKind(selected_source_kind),
+			["kaplan_meier"] = Deathlog_GetKaplanMeierForSourceKind(selected_source_kind),
+			["selected_source_kind"] = selected_source_kind,
 		}
-		for _, v in ipairs(stats_menu_elements) do
-			v.updateMenuElement(scroll_frame, map_id, stats_tbl, setMapRegion, model, view)
-		end
+
+		stats_menu_elements[2].updateMenuElement(
+			scroll_frame,
+			current_class_stats_class_id,
+			stats_tbl,
+			setMapRegion,
+			current_class_stats_model,
+			current_class_stats_view
+		)
+		stats_menu_elements[2]:Show()
+		stats_menu_elements[3].updateMenuElement(
+			scroll_frame,
+			current_class_stats_class_id,
+			stats_tbl,
+			setMapRegion,
+			current_class_stats_model,
+			current_class_stats_view
+		)
+		stats_menu_elements[3]:Show()
+
+		stats_menu_elements[1].updateMenuElement(
+			scroll_frame,
+			current_class_stats_class_id,
+			stats_tbl,
+			setMapRegion,
+			current_class_stats_model,
+			current_class_stats_view
+		)
+		stats_menu_elements[1]:Show()
+		stats_menu_elements[4].updateMenuElement(
+			scroll_frame,
+			current_class_stats_class_id,
+			stats_tbl,
+			setMapRegion,
+			current_class_stats_model,
+			current_class_stats_view
+		)
+		stats_menu_elements[4]:Show()
 	end
 
-	setMapRegion(1, "Warrior", "LogNormal", "Survival")
+	setMapRegion(
+		current_class_stats_class_id,
+		current_class_stats_class_name,
+		current_class_stats_model,
+		current_class_stats_view
+	)
 
 	scroll_frame.frame:HookScript("OnHide", function()
 		for _, v in ipairs(stats_menu_elements) do
@@ -2116,13 +2491,19 @@ local function drawInstanceStatisticsTab(container)
 	scroll_frame:AddChild(description_label)
 	local function modifyDescription(map_id, zone)
 		local mid = Deathlog_normalize_map_id_for_stats(map_id)
-		local deaths_in_zone = 0
-		if _stats["all"][mid] then
-			deaths_in_zone = _stats["all"][mid]["all"]["all"]["num_entries"]
+		local deaths_in_zone = Deathlog_GetCauseStatsCount(_cause_stats[mid])
+		local all_deaths = Deathlog_GetCauseStatsCount(_cause_stats["all"])
+		local zone_pct = 0
+		if all_deaths and all_deaths > 0 then
+			zone_pct = deaths_in_zone / all_deaths * 100
 		end
-		local all_deaths = _stats["all"]["all"]["all"]["all"]["num_entries"]
 		description_label:SetText(
-			string.format("%.2f", deaths_in_zone / all_deaths * 100) .. "% of all deaths occur in " .. zone .. "."
+			string.format("%.2f", zone_pct)
+				.. "% of all "
+				.. Deathlog_GetSelectedCauseDescriptor()
+				.. " occur in "
+				.. zone
+				.. "."
 		)
 	end
 
@@ -2152,13 +2533,22 @@ local function drawInstanceStatisticsTab(container)
 			modifyTitle(name)
 			modifyDescription(map_id, name)
 		end
+		local selected_source_kind = Deathlog_GetMenuSourceKind()
+		local selected_cause_label = Deathlog_GetSourceKindLabel(selected_source_kind)
+		if selected_source_kind ~= Deathlog_GetDefaultSourceKind() then
+			no_data_text:SetText("No " .. selected_cause_label .. " death data available\nfor this instance yet.")
+		else
+			no_data_text:SetText("No death data available\nfor this instance yet.")
+		end
 		local stats_tbl = {
 			["stats"] = _stats,
-			["log_normal_params"] = _log_normal_params,
+			["log_normal_params"] = Deathlog_GetLogNormalParamsForSourceKind(selected_source_kind),
+			["selected_source_kind"] = selected_source_kind,
 		}
 
 		-- Check if data exists for this instance
-		local has_data = _stats and _stats["all"] and _stats["all"][map_id]
+		local mid = Deathlog_normalize_map_id_for_stats(map_id)
+		local has_data = Deathlog_GetCauseStatsCount(_cause_stats[mid]) > 0
 
 		if has_data then
 			-- Show stats elements, hide no data message
@@ -2187,6 +2577,23 @@ local function drawInstanceStatisticsTab(container)
 		end
 		no_data_frame:Hide()
 	end)
+end
+
+local function drawMenuGroup(container, group)
+	container:ReleaseChildren()
+	if group == "StatisticsTab" then
+		drawStatisticsTab(container)
+	elseif group == "InstanceStatisticsTab" then
+		drawInstanceStatisticsTab(container)
+	elseif group == "ClassStatisticsTab" then
+		drawClassStatisticsTab(container)
+	elseif group == "CreatureStatisticsTab" then
+		drawCreatureStatisticsTab(container)
+	elseif group == "LogTab" then
+		drawLogTab(container)
+	elseif group == "WatchListTab" then
+		drawWatchListTab(container)
+	end
 end
 
 local function createDeathlogMenu()
@@ -2255,29 +2662,61 @@ local function createDeathlogMenu()
 		ace_deathlog_menu.contact_button = contact_btn
 	end
 
+	if ace_deathlog_menu.footer_source_kind_dd == nil then
+		ace_deathlog_menu.footer_source_kind_dd =
+			CreateFrame("Frame", nil, ace_deathlog_menu.frame, "UIDropDownMenuTemplate")
+	end
+	UIDropDownMenu_SetWidth(ace_deathlog_menu.footer_source_kind_dd, 115)
+	UIDropDownMenu_JustifyText(ace_deathlog_menu.footer_source_kind_dd, "LEFT")
+	UIDropDownMenu_Initialize(ace_deathlog_menu.footer_source_kind_dd, function(frame, level, menuList)
+		for _, value in ipairs(Deathlog_GetSourceKindOptionOrder()) do
+			local label = Deathlog_GetSourceKindOptions()[value]
+			local info = UIDropDownMenu_CreateInfo()
+			info.text = label
+			info.checked = Deathlog_GetMenuSourceKind() == value
+			info.func = function()
+				Deathlog_SetMenuSourceKind(value)
+				Deathlog_UpdateMenuSourceKindControl()
+				refreshMenuSearchResults()
+				if current_menu_group == "StatisticsTab"
+					or current_menu_group == "InstanceStatisticsTab"
+					or current_menu_group == "ClassStatisticsTab"
+					or current_menu_group == "CreatureStatisticsTab"
+				then
+					drawMenuGroup(deathlog_tabcontainer, current_menu_group)
+				end
+			end
+			UIDropDownMenu_AddButton(info)
+		end
+	end)
+
+	if ace_deathlog_menu.footer_source_kind_label == nil then
+		ace_deathlog_menu.footer_source_kind_label =
+			ace_deathlog_menu.frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	end
+	ace_deathlog_menu.footer_source_kind_label:SetFont(Deathlog_L.menu_font, 12, "")
+	ace_deathlog_menu.footer_source_kind_label:SetTextColor(255 / 255, 215 / 255, 0)
+	ace_deathlog_menu.footer_source_kind_label:SetText("Cause")
+	ace_deathlog_menu.footer_source_kind_label:Show()
+	UIDropDownMenu_SetText(
+		ace_deathlog_menu.footer_source_kind_dd,
+		Deathlog_GetSourceKindOptions()[Deathlog_GetMenuSourceKind()] or "All Causes"
+	)
+
 	local tab_group_type ="DeathlogTabGroup" ---@type AceGUIWidgetType|AceGUIContainerType 
 	deathlog_tabcontainer = AceGUI:Create(tab_group_type) ---@type AceGUIDeathlogTabGroup
 	local tab_table = Deathlog_L.tab_table
 	deathlog_tabcontainer:SetTabs(tab_table)
+	Deathlog_LayoutMenuSourceKindControl()
 	deathlog_tabcontainer:SetFullWidth(true)
 	deathlog_tabcontainer:SetFullHeight(true)
 	deathlog_tabcontainer:SetLayout("Flow")
 
 	local function SelectGroup(container, event, group)
-		container:ReleaseChildren()
-		if group == "StatisticsTab" then
-			drawStatisticsTab(container)
-		elseif group == "InstanceStatisticsTab" then
-			drawInstanceStatisticsTab(container)
-		elseif group == "ClassStatisticsTab" then
-			drawClassStatisticsTab(container)
-		elseif group == "CreatureStatisticsTab" then
-			drawCreatureStatisticsTab(container)
-		elseif group == "LogTab" then
-			drawLogTab(container)
-		elseif group == "WatchListTab" then
-			drawWatchListTab(container)
-		end
+		current_menu_group = group
+		drawMenuGroup(container, group)
+		Deathlog_LayoutMenuSourceKindControl()
+		Deathlog_UpdateMenuSourceKindControl()
 	end
 
 	deathlog_tabcontainer:SetCallback("OnGroupSelected", SelectGroup)
@@ -2305,25 +2744,16 @@ function DeathlogShowMenu(deathlog_data, stats, log_normal_params)
 	_deathlog_data = deathlog_data
 	_stats = stats
 	_log_normal_params = log_normal_params
-	local active_filter = _get_active_filter and _get_active_filter()
-	if active_filter and (_get_filters_active and _get_filters_active()) then
-		setDeathlogMenuLogData(DeathlogFilter(_deathlog_data, active_filter))
-	else
-		setDeathlogMenuLogData(_deathlog_data)
-	end
+	_cause_stats = DeathlogDataCopy.PRECOMPUTED_CAUSE_STATS or {}
+	Deathlog_UpdateMenuSourceKindControl()
+	refreshMenuSearchResults()
 
 	if _auto_refresh_ticker then _auto_refresh_ticker:Cancel() end
 	_auto_refresh_ticker = C_Timer.NewTicker(10, function()
 		if not deathlog_settings["auto_refresh_search"] then return end
 		if not deathlog_menu or not deathlog_menu.frame:IsShown() then return end
 		if page_number ~= 1 then return end
-		clearDeathlogMenuLogData(true)
-		local active_filter = _get_active_filter and _get_active_filter()
-		if active_filter and (_get_filters_active and _get_filters_active()) then
-			setDeathlogMenuLogData(DeathlogFilter(_deathlog_data, active_filter))
-		else
-			setDeathlogMenuLogData(_deathlog_data)
-		end
+		refreshMenuSearchResults(true)
 	end)
 end
 

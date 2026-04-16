@@ -1197,6 +1197,26 @@ function _dnl.testIntegration()
 				print(TAG .. "Phase 10: PvP source encode/decode")
 				local pvp_src_regular = _dnl.createPvpSourceId(_dnl.PVP_FLAGS.REGULAR, 1, 1, 42)
 				record("createPvpSourceId returns number", type(pvp_src_regular) == "number" and pvp_src_regular > 0)
+				record("SOURCE_KIND API is exposed",
+					type(DeathNotificationLib.SOURCE_KIND) == "table")
+
+				local some_npc_id = nil
+				for npc_id in pairs(_dnl.D.ID_TO_NPC) do
+					some_npc_id = npc_id
+					break
+				end
+				record("GetSourceKind classifies NPC source",
+					some_npc_id ~= nil and DeathNotificationLib.GetSourceKind(some_npc_id) == DeathNotificationLib.SOURCE_KIND.NPC)
+				record("GetSourceKind classifies environment source",
+					DeathNotificationLib.GetSourceKind(-3) == DeathNotificationLib.SOURCE_KIND.ENVIRONMENT)
+				record("GetSourceKind classifies reported source",
+					DeathNotificationLib.GetSourceKind(-1) == DeathNotificationLib.SOURCE_KIND.REPORTED)
+				record("GetSourceKind classifies PvP source",
+					DeathNotificationLib.GetSourceKind(pvp_src_regular) == DeathNotificationLib.SOURCE_KIND.PVP)
+				record("GetSourceKind returns unknown for nil",
+					DeathNotificationLib.GetSourceKind(nil) == DeathNotificationLib.SOURCE_KIND.UNKNOWN)
+				record("GetSourceKind returns unknown for junk input",
+					DeathNotificationLib.GetSourceKind("not-a-source") == DeathNotificationLib.SOURCE_KIND.UNKNOWN)
 
 				local pvp_decoded = _dnl.decodePvpSource(pvp_src_regular, "TestKiller")
 				record("decodePvpSource returns PvP string",

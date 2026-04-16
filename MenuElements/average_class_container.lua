@@ -77,14 +77,33 @@ for _, v in ipairs(average_class_subtitles) do
 	average_class_font_strings["all"][v[1]]:SetTextColor(1, 1, 1, 1)
 end
 
+local getFilteredClassEntry = Deathlog_getFilteredClassEntry
+
+local function getCreatureClassEntry(class_stats, creature_id, selected_source_kind)
+	if selected_source_kind ~= Deathlog_GetDefaultSourceKind()
+		and not Deathlog_SourceMatchesKind(creature_id, selected_source_kind)
+	then
+		return nil
+	end
+	if class_stats == nil then
+		return nil
+	end
+	return class_stats[creature_id]
+end
+
 function average_class_container.updateMenuElement(scroll_frame, current_map_id, stats_tbl, setMapRegion)
 	average_class_container:Show()
 	local entry_data = {}
 	local map_id = Deathlog_normalize_map_id_for_stats(current_map_id)
 	local _stats = stats_tbl["stats"]
+	local selected_source_kind = Deathlog_NormalizeSourceKind(stats_tbl["selected_source_kind"])
 	-- Container zones (continents, Outland) now have aggregated stats
 	if average_class_container.configure_for == "map" and _stats["all"][map_id] == nil then
 		return
+	end
+	local total_map_entry = nil
+	if average_class_container.configure_for == "map" and _stats["all"][map_id] then
+		total_map_entry = getFilteredClassEntry(_stats["all"][map_id]["all"], selected_source_kind)
 	end
 
 	average_class_container:SetParent(scroll_frame.frame)
@@ -122,8 +141,8 @@ function average_class_container.updateMenuElement(scroll_frame, current_map_id,
 	end
 
 	local function createEntryData(class_id)
-		local v = _stats["all"][map_id][class_id]
-		if v == nil then
+		local v = getFilteredClassEntry(_stats["all"][map_id][class_id], selected_source_kind)
+		if v == nil or total_map_entry == nil then
 			entry_data[class_id] = {}
 			local class_str, _, _ = GetClassInfo(class_id)
 			entry_data[class_id]["Class"] = class_str
@@ -139,18 +158,23 @@ function average_class_container.updateMenuElement(scroll_frame, current_map_id,
 			end
 			entry_data[class_id] = {}
 			entry_data[class_id]["Class"] = class_str
-			entry_data[class_id]["#"] = v["all"]["num_entries"]
-			entry_data[class_id]["%"] = string.format(
-				"%.1f",
-				v["all"]["num_entries"] / _stats["all"][map_id]["all"]["all"]["num_entries"] * 100.0
-			) .. "%"
-			entry_data[class_id]["Avg."] = string.format("%.1f", v["all"]["avg_lvl"])
+			entry_data[class_id]["#"] = v["num_entries"]
+			if total_map_entry["num_entries"] > 0 then
+				entry_data[class_id]["%"] = string.format(
+					"%.1f",
+					v["num_entries"] / total_map_entry["num_entries"] * 100.0
+				) .. "%"
+			else
+				entry_data[class_id]["%"] = "-"
+			end
+			entry_data[class_id]["Avg."] = string.format("%.1f", v["avg_lvl"])
 		end
 	end
 
 	local function createEntryDataForCreature(class_id, creature_id)
-		local v = _stats["all"]["all"][class_id]
-		if v == nil or v[creature_id] == nil then
+		local v = getCreatureClassEntry(_stats["all"]["all"][class_id], creature_id, selected_source_kind)
+		local total_creature_entry = getCreatureClassEntry(_stats["all"]["all"]["all"], creature_id, selected_source_kind)
+		if v == nil or total_creature_entry == nil then
 			entry_data[class_id] = {}
 			local class_str, _, _ = GetClassInfo(class_id)
 			entry_data[class_id]["Class"] = class_str
@@ -166,12 +190,16 @@ function average_class_container.updateMenuElement(scroll_frame, current_map_id,
 			end
 			entry_data[class_id] = {}
 			entry_data[class_id]["Class"] = class_str
-			entry_data[class_id]["#"] = v[creature_id]["num_entries"]
-			entry_data[class_id]["%"] = string.format(
-				"%.1f",
-				v[creature_id]["num_entries"] / _stats["all"]["all"]["all"]["all"]["num_entries"] * 100.0
-			) .. "%"
-			entry_data[class_id]["Avg."] = string.format("%.1f", v[creature_id]["avg_lvl"])
+			entry_data[class_id]["#"] = v["num_entries"]
+			if total_creature_entry["num_entries"] > 0 then
+				entry_data[class_id]["%"] = string.format(
+					"%.1f",
+					v["num_entries"] / total_creature_entry["num_entries"] * 100.0
+				) .. "%"
+			else
+				entry_data[class_id]["%"] = "-"
+			end
+			entry_data[class_id]["Avg."] = string.format("%.1f", v["avg_lvl"])
 		end
 	end
 

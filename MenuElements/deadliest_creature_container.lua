@@ -19,6 +19,7 @@ along with the Deathlog AddOn. If not, see <http://www.gnu.org/licenses/>.
 --
 local id_to_npc = DeathNotificationLib.ID_TO_NPC
 local deathlog_environment_damage = DeathNotificationLib.ENVIRONMENT_DAMAGE
+local source_kind = Deathlog_GetSourceKindConstants()
 
 ---@type MenuElementContainer
 local deadliest_creatures_container = CreateFrame("Frame")
@@ -119,7 +120,28 @@ if deadliest_creatures_container.right == nil then
 	deadliest_creatures_container.right:SetTexCoord(0.81, 0.94, 0.5, 1)
 end
 
+local function getHeadingTextForSourceKind(selected_source_kind)
+	if selected_source_kind == source_kind.NPC then
+		return "Deadliest Creatures"
+	end
+	if selected_source_kind == source_kind.ENVIRONMENT then
+		return "Environment Hazards"
+	end
+	if selected_source_kind == source_kind.PVP then
+		return "PvP Threats"
+	end
+	if selected_source_kind == source_kind.REPORTED then
+		return "Reported Deaths"
+	end
+	if selected_source_kind == source_kind.UNKNOWN then
+		return "Unclassified Sources"
+	end
+	return "Deadliest Sources"
+end
+
 function deadliest_creatures_container.updateMenuElement(scroll_frame, current_map_id, stats_tbl, setMapRegion)
+	local selected_source_kind = Deathlog_NormalizeSourceKind(stats_tbl["selected_source_kind"])
+	deadliest_creatures_container.heading:SetText(getHeadingTextForSourceKind(selected_source_kind))
 	deadliest_creatures_container.heading:Show()
 	deadliest_creatures_container.left:Show()
 	deadliest_creatures_container.right:Show()
@@ -130,26 +152,24 @@ function deadliest_creatures_container.updateMenuElement(scroll_frame, current_m
 	else
 		deadliest_creatures_container.heading_description:Hide()
 	end
-	local num_recorded_kills = 0
+	local num_recorded_kills = 0 -- TODO: currently unused; wire into UI or remove
 	for i = 1, 10 do
 		deadliest_creatures_textures[i]:Hide()
 	end
 	local map_id = Deathlog_normalize_map_id_for_stats(current_map_id)
 	local most_deadly_units_raw = DeathlogGetOrdered(_stats, { "all", map_id, "all", nil })
-	-- Filter out entries that have no known creature name (PvP-encoded source_ids, source_id=-1, etc.)
+	-- Filter to the selected cause kind and only keep rows we can name sensibly.
 	local most_deadly_units = {}
 	if most_deadly_units_raw then
 		for _, v in ipairs(most_deadly_units_raw) do
-			if id_to_npc[v[1]] or deathlog_environment_damage[v[1]] then
-				most_deadly_units[#most_deadly_units + 1] = v
+			local source_name = Deathlog_GetSourceNameById(v[1])
+			if Deathlog_SourceMatchesKind(v[1], selected_source_kind) and source_name ~= "" then
+				most_deadly_units[#most_deadly_units + 1] = { v[1], v[2], source_name }
 			end
 		end
 	end
 	if #most_deadly_units > 0 then
 		local max_kills = most_deadly_units[1][2]
-		for _, v in ipairs(most_deadly_units) do
-			num_recorded_kills = num_recorded_kills + v[2]
-		end
 
 		deadliest_creatures_container:SetParent(scroll_frame.frame)
 		deadliest_creatures_container:ClearAllPoints()
@@ -170,9 +190,7 @@ function deadliest_creatures_container.updateMenuElement(scroll_frame, current_m
 				deadliest_creatures_textures[i]:SetBackgroundWidth(
 					deadliest_creatures_container:GetWidth() * most_deadly_units[i][2] / max_kills
 				)
-				deadliest_creatures_textures[i]:SetCreatureName(
-					id_to_npc[most_deadly_units[i][1]] or deathlog_environment_damage[most_deadly_units[i][1]]
-				)
+				deadliest_creatures_textures[i]:SetCreatureName(most_deadly_units[i][3])
 				deadliest_creatures_textures[i]:SetNumKills(most_deadly_units[i][2])
 				if valid_map then
 					deadliest_creatures_textures[i]:SetScript("OnEnter", function()

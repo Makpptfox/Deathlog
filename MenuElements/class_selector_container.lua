@@ -76,7 +76,7 @@ function class_selector_container.updateMenuElement(scroll_frame, class_id, stat
 
 	class_selector_container:SetParent(scroll_frame.frame)
 	class_selector_container:ClearAllPoints()
-	class_selector_container:SetPoint("TOPLEFT", scroll_frame.frame, "TOPLEFT", 45, -30)
+	class_selector_container:SetPoint("TOPLEFT", scroll_frame.frame, "TOPLEFT", 45, -55)
 	class_selector_container:SetHeight(scroll_frame.frame:GetWidth() * 0.6 * 3 / 4)
 	class_selector_container:SetWidth(scroll_frame.frame:GetWidth() * 0.6)
 	class_selector_container:Show()
@@ -191,6 +191,7 @@ function class_selector_container.updateMenuElement(scroll_frame, class_id, stat
 		end
 	end
 	class_selector_container.metric_dd:SetPoint("TOPLEFT", class_selector_container, "TOPLEFT", 500, -10)
+	class_selector_container.metric_dd:Show()
 	UIDropDownMenu_SetText(class_selector_container.metric_dd, model)
 	UIDropDownMenu_SetWidth(class_selector_container.metric_dd, 130)
 	UIDropDownMenu_Initialize(class_selector_container.metric_dd, dropdownFunctions)
@@ -229,6 +230,7 @@ function class_selector_container.updateMenuElement(scroll_frame, class_id, stat
 	end
 
 	class_selector_container.view_dd:SetPoint("TOPLEFT", class_selector_container, "TOPLEFT", 650, -10)
+	class_selector_container.view_dd:Show()
 	local view_display = view == "Survival" and "Survival (P(T>t))" or "Hazard (P(T>t | T=lvl))"
 	UIDropDownMenu_SetText(class_selector_container.view_dd, view_display)
 	UIDropDownMenu_SetWidth(class_selector_container.view_dd, 130)

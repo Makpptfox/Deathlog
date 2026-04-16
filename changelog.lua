@@ -21,6 +21,29 @@ local CURRENT_VERSION = GetAddOnMetadata("Deathlog", "Version") or "0.0.0"
 local CHANGELOG_CONTENT = [[
 |cFFFFD700Deathlog Changelog|r
 
+|cFF00FF00[0.5.6] - 2026-04-15|r
+
+|cFFFFFFFFNew Features|r
+- Shared Cause filter in the Deathlog menu — one dropdown now drives the Search Log plus Zone, Instance, Creature, and Class statistics
+- Minilog, global heatmap indicator, and world map heatmap overlay each now have their own Source Filter setting
+- Class survival graphs and tables now support specific causes instead of only all-cause precomputes
+
+|cFFFFFFFFImprovements|r
+- Cause-specific counts, descriptions, and empty states now update across the stats tabs, including the footer preprocessed total
+- Creature rankings, class comparison tables, and instance summaries now use the selected-cause dataset instead of mixing in all-cause totals
+- Exported by-cause log-normal and Kaplan-Meier tables now follow the same shipped-data and fallback-cache flow as the rest of Deathlog's precomputed data
+
+|cFFFFFFFFBug Fixes|r
+- Fixed instance, creature, and class statistics not redrawing correctly when the Cause filter changed
+- Fixed sparse cause buckets breaking normalized creature rankings by falling back cleanly when a survival model is unavailable
+- Fixed menu layout regressions introduced while consolidating the Cause control beside Watch List
+- Fixed Creature Statistics showing "0.00%" when no data exists for the selected creature
+- Fixed PvP deaths showing as "Unknown" in creature statistics — now displays race, class, and level
+- Fixed Death Statistics displaying "100% occur in Azeroth" at the top-level map
+
+|cFFFFFFFFDeathNotificationLib V14|r
+- Added shared source-kind classification APIs and by-cause heatmap data plumbing used by Deathlog's new Cause filter, cause-aware stats, and per-cause heatmaps
+
 |cFF00FF00[0.5.5] - 2026-03-22|r
 
 |cFFFFFFFFBug Fixes|r

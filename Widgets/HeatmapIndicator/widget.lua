@@ -29,7 +29,9 @@ heatmap_indicator_frame.numeric_text:Show()
 local function startUpdate()
 	if heatmap_indicator_frame.ticker == nil then
 		heatmap_indicator_frame.ticker = C_Timer.NewTicker(1, function()
-			local precomputed_heatmap_intensity = DeathNotificationLibDataCopy.HEATMAP_INTENSITY
+			local precomputed_heatmap_intensity = Deathlog_GetHeatmapIntensityForSourceKind(
+				Deathlog_GetWidgetSourceKind(widget_name)
+			)
 			local map = C_Map.GetBestMapForUnit("player")
 			local instance_id = nil
 			local position = nil
@@ -117,6 +119,7 @@ local defaults = {
 	["size_x"] = 40,
 	["size_y"] = 40,
 	["show_value"] = false,
+	["source_kind"] = Deathlog_GetDefaultSourceKind(),
 }
 
 local function applyDefaults(_defaults, force)
@@ -225,6 +228,20 @@ options = {
 			end,
 			set = function()
 				deathlog_settings[widget_name]["show_value"] = not deathlog_settings[widget_name]["show_value"]
+				Deathlog_HIWidget_applySettings()
+			end,
+		},
+		source_kind = {
+			type = "select",
+			name = "Source Filter",
+			desc = "Choose which death source kinds should drive the global heatmap indicator.",
+			values = Deathlog_GetSourceKindOptions(),
+			sorting = Deathlog_GetSourceKindOptionOrder(),
+			get = function()
+				return Deathlog_GetWidgetSourceKind(widget_name)
+			end,
+			set = function(_, value)
+				deathlog_settings[widget_name]["source_kind"] = value
 				Deathlog_HIWidget_applySettings()
 			end,
 		},

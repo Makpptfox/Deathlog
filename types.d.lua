@@ -1,14 +1,25 @@
+---@alias Key number|"all"
+
 ---@alias DeathStatEntry { num_entries: number, sum_lvl: number, avg_lvl: number }
----@alias PrecomputedGeneralStatsTable table<string|number, DeathStatEntry|table<string|number, any>>
+---@alias PrecomputedGeneralStatsTable table<string, table<Key, table<Key, table<Key, DeathStatEntry>>>>
 
 ---@alias KaplanMeierCurve table<number, number>
 ---@alias PrecomputedKaplanMeierTable table<number, KaplanMeierCurve>
+---@alias PrecomputedKaplanMeierByCauseTable table<DNL_SOURCE_KIND, PrecomputedKaplanMeierTable>
 
 ---@alias LogNormalParamsTuple table<number, number>
 ---@alias LogNormalParamsByClass table<number, LogNormalParamsTuple>
----@alias PrecomputedLogNormalParamsTable table<string|number, LogNormalParamsByClass>
+---@alias PrecomputedLogNormalParamsTable table<Key, LogNormalParamsByClass>
+---@alias PrecomputedLogNormalParamsByCauseTable table<DNL_SOURCE_KIND, PrecomputedLogNormalParamsTable>
 
 ---@alias PrecomputedMostDeadlyByZoneTable table<number, table<number, number>>
+
+---@alias CauseStatsEntry { total: number, npc: number, environment: number, pvp: number, reported: number, unknown: number, top_sources: table<DNL_SOURCE_KIND, number|nil> }
+---@alias PrecomputedCauseStatsTable table<Key, CauseStatsEntry>
+
+---@alias HeatmapIntensityTable table<number, table<number, table<number, number>>>
+---@alias HeatmapIntensityByCauseTable table<DNL_SOURCE_KIND, HeatmapIntensityTable>
+---@alias HeatmapCreatureSubsetTable table<number, table<number, table<number, table<number, boolean>>>>
 
 ---@alias PrecomputedPurgeTable table<string, table<string, boolean>>
 
@@ -70,9 +81,12 @@ Hardcore_Settings = nil
 ---@field exit_button any
 ---@field exit_button_x any
 ---@field contact_button any
+---@field footer_source_kind_dd any
+---@field footer_source_kind_label any
 ---@field SetVersion fun(self: AceGUIDeathlogMenu, version: string)
 
 ---@class AceGUIDeathlogTabGroup : AceGUITabGroup
+---@field tabs table<number, any>
 
 ---@class DeathlogMiniLog : AceGUIFrame
 ---@field subtitletext_tbl table

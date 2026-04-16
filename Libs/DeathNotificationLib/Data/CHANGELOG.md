@@ -3,7 +3,7 @@
 ## 1774134000
 
 ### vanilla
-- 1,237,635 entries as of March 22, 2026
+- 1,333,249 entries as of April 15, 2026
 
 ### tbc
-- 1,239,027 entries as of March 22, 2026
+- 1,335,106 entries as of April 15, 2026

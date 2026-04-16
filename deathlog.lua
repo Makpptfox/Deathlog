@@ -411,40 +411,52 @@ local function handleEvent(self, event, ...)
 			addon_version    = version,
 		})
 		DeathNotificationLib.HookOnNewAddonEntry("Deathlog", newEntry)
-		if DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS and DeathlogDataCopy.PRECOMPUTED_LOG_NORMAL_PARAMS and DeathlogDataCopy.PRECOMPUTED_KAPLAN_MEIER and DeathlogDataCopy.PRECOMPUTED_MOST_DEADLY_BY_ZONE and DeathlogDataCopy.PRECOMPUTED_PURGES then
+		if DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS and DeathlogDataCopy.PRECOMPUTED_LOG_NORMAL_PARAMS and DeathlogDataCopy.PRECOMPUTED_LOG_NORMAL_PARAMS_BY_CAUSE and DeathlogDataCopy.PRECOMPUTED_KAPLAN_MEIER and DeathlogDataCopy.PRECOMPUTED_KAPLAN_MEIER_BY_CAUSE and DeathlogDataCopy.PRECOMPUTED_MOST_DEADLY_BY_ZONE and DeathlogDataCopy.PRECOMPUTED_CAUSE_STATS and DeathlogDataCopy.PRECOMPUTED_PURGES then
 			deathlog_precomputed.PRECOMPUTED_GENERAL_STATS = nil
 			deathlog_precomputed.PRECOMPUTED_LOG_NORMAL_PARAMS = nil
+			deathlog_precomputed.PRECOMPUTED_LOG_NORMAL_PARAMS_BY_CAUSE = nil
 			deathlog_precomputed.PRECOMPUTED_KAPLAN_MEIER = nil
+			deathlog_precomputed.PRECOMPUTED_KAPLAN_MEIER_BY_CAUSE = nil
 			deathlog_precomputed.PRECOMPUTED_MOST_DEADLY_BY_ZONE = nil
+			deathlog_precomputed.PRECOMPUTED_CAUSE_STATS = nil
 			deathlog_precomputed.PRECOMPUTED_PURGES = nil
 		else
-			if not (version == deathlog_precomputed.DD_VERSION and deathlog_precomputed.PRECOMPUTED_GENERAL_STATS and deathlog_precomputed.PRECOMPUTED_LOG_NORMAL_PARAMS and deathlog_precomputed.PRECOMPUTED_KAPLAN_MEIER and deathlog_precomputed.PRECOMPUTED_MOST_DEADLY_BY_ZONE and deathlog_precomputed.PRECOMPUTED_PURGES) then
+			if not (version == deathlog_precomputed.DD_VERSION and deathlog_precomputed.PRECOMPUTED_GENERAL_STATS and deathlog_precomputed.PRECOMPUTED_LOG_NORMAL_PARAMS and deathlog_precomputed.PRECOMPUTED_LOG_NORMAL_PARAMS_BY_CAUSE and deathlog_precomputed.PRECOMPUTED_KAPLAN_MEIER and deathlog_precomputed.PRECOMPUTED_KAPLAN_MEIER_BY_CAUSE and deathlog_precomputed.PRECOMPUTED_MOST_DEADLY_BY_ZONE and deathlog_precomputed.PRECOMPUTED_CAUSE_STATS and deathlog_precomputed.PRECOMPUTED_PURGES) then
 				deathlog_precomputed.DD_VERSION = version
 				deathlog_precomputed.PRECOMPUTED_GENERAL_STATS = Deathlog_calculate_statistics(deathlog_data)
 				deathlog_precomputed.PRECOMPUTED_LOG_NORMAL_PARAMS = Deathlog_calculateLogNormalParameters(deathlog_data)
+				deathlog_precomputed.PRECOMPUTED_LOG_NORMAL_PARAMS_BY_CAUSE = Deathlog_calculateLogNormalParametersByCause(deathlog_data)
 				deathlog_precomputed.PRECOMPUTED_KAPLAN_MEIER = Deathlog_calculateKaplanMeier(deathlog_data)
+				deathlog_precomputed.PRECOMPUTED_KAPLAN_MEIER_BY_CAUSE = Deathlog_calculateKaplanMeierByCause(deathlog_data)
 				deathlog_precomputed.PRECOMPUTED_MOST_DEADLY_BY_ZONE = Deathlog_calculateMostDeadlyByZone(deathlog_data)
+				deathlog_precomputed.PRECOMPUTED_CAUSE_STATS = Deathlog_calculateCauseStats(deathlog_data)
 				deathlog_precomputed.PRECOMPUTED_PURGES = Deathlog_calculatePurges(deathlog_data)
 			end
 
 			DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS = deathlog_precomputed.PRECOMPUTED_GENERAL_STATS
 			DeathlogDataCopy.PRECOMPUTED_LOG_NORMAL_PARAMS = deathlog_precomputed.PRECOMPUTED_LOG_NORMAL_PARAMS
+			DeathlogDataCopy.PRECOMPUTED_LOG_NORMAL_PARAMS_BY_CAUSE = deathlog_precomputed.PRECOMPUTED_LOG_NORMAL_PARAMS_BY_CAUSE
 			DeathlogDataCopy.PRECOMPUTED_KAPLAN_MEIER = deathlog_precomputed.PRECOMPUTED_KAPLAN_MEIER
+			DeathlogDataCopy.PRECOMPUTED_KAPLAN_MEIER_BY_CAUSE = deathlog_precomputed.PRECOMPUTED_KAPLAN_MEIER_BY_CAUSE
 			DeathlogDataCopy.PRECOMPUTED_MOST_DEADLY_BY_ZONE = deathlog_precomputed.PRECOMPUTED_MOST_DEADLY_BY_ZONE
+			DeathlogDataCopy.PRECOMPUTED_CAUSE_STATS = deathlog_precomputed.PRECOMPUTED_CAUSE_STATS
 			DeathlogDataCopy.PRECOMPUTED_PURGES = deathlog_precomputed.PRECOMPUTED_PURGES
 		end
-		if DeathNotificationLibDataCopy.HEATMAP_INTENSITY and DeathNotificationLibDataCopy.HEATMAP_CREATURE_SUBSET then
+		if DeathNotificationLibDataCopy.HEATMAP_INTENSITY and DeathNotificationLibDataCopy.HEATMAP_INTENSITY_BY_CAUSE and DeathNotificationLibDataCopy.HEATMAP_CREATURE_SUBSET then
 			deathlog_precomputed.HEATMAP_INTENSITY = nil
+			deathlog_precomputed.HEATMAP_INTENSITY_BY_CAUSE = nil
 			deathlog_precomputed.HEATMAP_CREATURE_SUBSET = nil
 		else
-			if not (version == deathlog_precomputed.DNLD_VERSION and deathlog_precomputed.HEATMAP_INTENSITY and deathlog_precomputed.HEATMAP_CREATURE_SUBSET) then
+			if not (version == deathlog_precomputed.DNLD_VERSION and deathlog_precomputed.HEATMAP_INTENSITY and deathlog_precomputed.HEATMAP_INTENSITY_BY_CAUSE and deathlog_precomputed.HEATMAP_CREATURE_SUBSET) then
 				local skull_locs = Deathlog_calculateSkullLocs(deathlog_data)
 				deathlog_precomputed.DNLD_VERSION = version
 				deathlog_precomputed.HEATMAP_INTENSITY = Deathlog_calculateHeatmapIntensity(skull_locs)
+				deathlog_precomputed.HEATMAP_INTENSITY_BY_CAUSE = Deathlog_calculateHeatmapIntensityByCause(skull_locs)
 				deathlog_precomputed.HEATMAP_CREATURE_SUBSET = Deathlog_calculateHeatmapCreatureSubset(skull_locs)
 			end
 
 			DeathNotificationLibDataCopy.HEATMAP_INTENSITY = deathlog_precomputed.HEATMAP_INTENSITY
+			DeathNotificationLibDataCopy.HEATMAP_INTENSITY_BY_CAUSE = deathlog_precomputed.HEATMAP_INTENSITY_BY_CAUSE
 			DeathNotificationLibDataCopy.HEATMAP_CREATURE_SUBSET = deathlog_precomputed.HEATMAP_CREATURE_SUBSET
 		end
 		loadWidgets()

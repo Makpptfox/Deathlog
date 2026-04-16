@@ -4,9 +4,9 @@ A WoW Hardcore addon that provides a UI for exploring the deathlog and death sta
 
 **Over 1,000,000 death records** collected and counting!
 
-**[SEE WIKI FOR OFFLINE STATS](https://github.com/aaronma37/Deathlog/wiki)**  The wiki will be updated as the database grows
+**[SEE WIKI FOR OFFLINE STATS](https://github.com/Deathwing/Deathlog/wiki)**  The wiki will be updated as the database grows
 
-*Feel free to use the database for any purpose!* [Vanilla database](https://github.com/aaronma37/Deathlog/tree/master/database/db_vanilla.json) | [TBC database](https://github.com/aaronma37/Deathlog/tree/master/database/db_tbc.json)
+*Feel free to use the database for any purpose!* [Vanilla database](https://github.com/Deathwing/Deathlog/tree/master/database/db_vanilla.json) | [TBC database](https://github.com/Deathwing/Deathlog/tree/master/database/db_tbc.json)
 
 ## Compatibility
 

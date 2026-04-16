@@ -80,6 +80,16 @@ _dnl.QUALITY = {
 	SELF = 3,     --- Self-reported: the dying player knows best
 }
 
+---@enum DNL_SOURCE_KIND
+_dnl.SOURCE_KIND = {
+	ALL = "all",
+	NPC = "npc",
+	ENVIRONMENT = "environment",
+	PVP = "pvp",
+	REPORTED = "reported",
+	UNKNOWN = "unknown",
+}
+
 _dnl.ENVIRONMENT_DAMAGE = {
 	[-2] = "Drowning",
 	[-3] = "Falling",
@@ -93,6 +103,38 @@ _dnl.ENVIRONMENT_DAMAGE_TO_ID = {}
 for id, name in pairs(_dnl.ENVIRONMENT_DAMAGE) do
 	_dnl.ENVIRONMENT_DAMAGE_TO_ID[name] = id
 end
+
+---@param source_id number|string|nil
+---@return DNL_SOURCE_KIND source_kind
+local function getSourceKind(source_id)
+	if source_id == nil then
+		return _dnl.SOURCE_KIND.UNKNOWN
+	end
+
+	local source_id_num = tonumber(source_id)
+	if not source_id_num then
+		return _dnl.SOURCE_KIND.UNKNOWN
+	end
+
+	if source_id_num == -1 then
+		return _dnl.SOURCE_KIND.REPORTED
+	end
+
+	if _dnl.D.ID_TO_NPC[source_id_num] then
+		return _dnl.SOURCE_KIND.NPC
+	end
+
+	if _dnl.ENVIRONMENT_DAMAGE[source_id_num] then
+		return _dnl.SOURCE_KIND.ENVIRONMENT
+	end
+
+	if _dnl.isValidPvpSourceId and _dnl.isValidPvpSourceId(source_id_num) then
+		return _dnl.SOURCE_KIND.PVP
+	end
+
+	return _dnl.SOURCE_KIND.UNKNOWN
+end
+
 
 --- Maximum total wire-message length (Blizzard limit for both
 --- SendChatMessage and SendAddonMessage payloads).
@@ -660,7 +702,11 @@ end
 
 DeathNotificationLib.SOURCE = _dnl.SOURCE
 
+DeathNotificationLib.SOURCE_KIND = _dnl.SOURCE_KIND
+
 DeathNotificationLib.ENVIRONMENT_DAMAGE = _dnl.ENVIRONMENT_DAMAGE
+
+DeathNotificationLib.GetSourceKind = getSourceKind
 
 DeathNotificationLib.Fletcher16 = _dnl.fletcher16
 

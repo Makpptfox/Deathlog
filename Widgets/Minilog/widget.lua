@@ -579,11 +579,37 @@ local function shiftEntry(_entry_from, _entry_to)
 	setEntry(_entry_from.player_data, _entry_to)
 end
 
+local function clearVisibleEntries()
+	if selected and row_entry[selected] then
+		row_entry[selected]:deselect()
+	end
+	selected = nil
+	entry_cache = {}
+	for _, widget in pairs(row_entry) do
+		widget.player_data = nil
+		for _, font_string in pairs(widget.font_strings) do
+			font_string:SetText("")
+		end
+	end
+end
+
+function Deathlog_minilog_refreshEntries()
+	if loaded == false then
+		return
+	end
+
+	clearVisibleEntries()
+	local ordered_entries = DeathlogOrderByFast(deathlog_data or {})
+	local max_visible_entries = math.min(#ordered_entries, #row_entry)
+	for i = max_visible_entries, 1, -1 do
+		Deathlog_widget_minilog_createEntry(ordered_entries[i])
+	end
+end
+
 function Deathlog_widget_minilog_createEntry(player_data)
 	if entry_cache[player_data["name"]] then
 		return
 	end
-	entry_cache[player_data["name"]] = 1
 	local ws = deathlog_settings[widget_name]
 	if
 		ws
@@ -603,6 +629,12 @@ function Deathlog_widget_minilog_createEntry(player_data)
 			return
 		end
 	end
+
+	if ws and not Deathlog_SourceMatchesKind(player_data, Deathlog_GetWidgetSourceKind(widget_name)) then
+		return
+	end
+
+	entry_cache[player_data["name"]] = 1
 
 	for i = 1, 19 do
 		if row_entry[i + 1].player_data ~= nil then
@@ -735,6 +767,7 @@ local defaults = {
 	["tooltip_lastwords"] = true,
 	["lock"] = false,
 	["filter_mode"] = "all",  -- "all", "guild_only", "guild_confederation", "none"
+	["source_kind"] = Deathlog_GetDefaultSourceKind(),
 }
 
 local function applyDefaults(_defaults, force)
@@ -923,6 +956,10 @@ function Deathlog_minilog_applySettings(rebuild_ace)
 	if optionsframe == nil then
 		LibStub("AceConfig-3.0"):RegisterOptionsTable(widget_name, options)
 		optionsframe = LibStub("AceConfigDialog-3.0"):AddToBlizOptions(widget_name, widget_name, "Deathlog")
+	end
+
+	if rebuild_ace then
+		Deathlog_minilog_refreshEntries()
 	end
 end
 
@@ -1489,7 +1526,7 @@ options = {
 					end,
 					set = function(self, value)
 						deathlog_settings[widget_name]["min_lvl"] = value
-						Deathlog_minilog_applySettings()
+						Deathlog_minilog_applySettings(true)
 					end,
 				},
 				max_lvl = {
@@ -1505,14 +1542,29 @@ options = {
 					end,
 					set = function(self, value)
 						deathlog_settings[widget_name]["max_lvl"] = value
-						Deathlog_minilog_applySettings()
+						Deathlog_minilog_applySettings(true)
+					end,
+				},
+				source_kind = {
+					type = "select",
+					name = "Source Filter",
+					desc = "Choose which death source kinds should appear in the minilog.",
+					order = 3,
+					values = Deathlog_GetSourceKindOptions(),
+					sorting = Deathlog_GetSourceKindOptionOrder(),
+					get = function()
+						return Deathlog_GetWidgetSourceKind(widget_name)
+					end,
+					set = function(self, value)
+						deathlog_settings[widget_name]["source_kind"] = value
+						Deathlog_minilog_applySettings(true)
 					end,
 				},
 				filter_mode = {
 					type = "select",
 					name = "Death Filter",
 					desc = "Filter which deaths to display. 'Guild Only' shows only deaths from your guild. 'Guild + Confederation' also includes GreenWall confederation guilds.",
-					order = 3,
+					order = 4,
 					values = function()
 						return DeathNotificationLib.GetGuildFilterModeOptions()
 					end,
@@ -1523,7 +1575,7 @@ options = {
 					end,
 					set = function(self, value)
 						deathlog_settings[widget_name]["filter_mode"] = value
-						Deathlog_minilog_applySettings()
+						Deathlog_minilog_applySettings(true)
 					end,
 				},
 				greenwall_status = {
@@ -1531,7 +1583,7 @@ options = {
 					name = function()
 						return "|cFF888888" .. DeathNotificationLib.GetGreenWallStatus() .. "|r"
 					end,
-					order = 3.1,
+					order = 4.1,
 					width = "full",
 				},
 			},

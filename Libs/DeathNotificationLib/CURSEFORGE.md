@@ -144,5 +144,5 @@ DNL ships with locale-aware lookup tables exposed on the `DeathNotificationLib` 
 
 ## Links
 
-- [Source Code (GitHub)](https://github.com/aaronma37/Deathlog)
-- [Integration Guide](https://github.com/aaronma37/Deathlog/blob/master/Libs/DeathNotificationLib/README.md)
+- [Source Code (GitHub)](https://github.com/Deathwing/Deathlog)
+- [Integration Guide](https://github.com/Deathwing/Deathlog/blob/master/Libs/DeathNotificationLib/README.md)
