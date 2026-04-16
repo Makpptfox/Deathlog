@@ -21,6 +21,13 @@ local CURRENT_VERSION = GetAddOnMetadata("Deathlog", "Version") or "0.0.0"
 local CHANGELOG_CONTENT = [[
 |cFFFFD700Deathlog Changelog|r
 
+|cFF00FF00[0.5.7] - 2026-04-16|r
+
+|cFFFFFFFFBug Fixes|r
+- Fixed crash when viewing class statistics with no data for the "all" aggregate
+- Fixed crash in creature ranking tooltip when precomputed general stats are unavailable
+- Fixed crash in deadliest creature filter when a creature entry is missing from the stats table
+
 |cFF00FF00[0.5.6] - 2026-04-15|r
 
 |cFFFFFFFFNew Features|r

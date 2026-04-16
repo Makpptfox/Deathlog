@@ -284,7 +284,7 @@ function class_stat_comparison_container.updateMenuElement(
 		local v = getFilteredClassEntry(_stats["all"][map_id][class_id], selected_source_kind)
 		if v == nil then
 			entry_data[class_id] = {}
-			local class_str, _, _ = GetClassInfo(class_id)
+			local class_str = class_id == "all" and "all" or select(1, GetClassInfo(class_id))
 			entry_data[class_id]["Class"] = class_str
 			entry_data[class_id]["# Deaths"] = "-"
 			entry_data[class_id]["% of all"] = "-"

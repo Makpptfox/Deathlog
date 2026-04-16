@@ -2,6 +2,13 @@
 
 All notable changes to Deathlog will be documented in this file.
 
+## [0.5.7] - 2026-04-16
+
+### Bug Fixes
+- Fixed crash when viewing class statistics with no data for the "all" aggregate — `GetClassInfo("all")` is no longer called
+- Fixed crash in creature ranking tooltip when precomputed general stats are unavailable
+- Fixed crash in deadliest creature filter when a creature entry is missing from the stats table
+
 ## [0.5.6] - 2026-04-15
 
 ### New Features

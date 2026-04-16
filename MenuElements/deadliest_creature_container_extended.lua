@@ -558,6 +558,7 @@ function deadliest_creatures_container.updateMenuElement(
 			if resolved_name and resolved_name ~= ""
 				and Deathlog_SourceMatchesKind(v[1], selected_source_kind)
 				and filter(resolved_name)
+				and _stats["all"]["all"]["all"][v[1]]
 				and lvlFunction(_stats["all"]["all"]["all"][v[1]]["avg_lvl"])
 			then
 				filtered_most_deadly_units[#filtered_most_deadly_units + 1] = v

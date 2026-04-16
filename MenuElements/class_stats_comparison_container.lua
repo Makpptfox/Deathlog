@@ -288,7 +288,7 @@ function average_class_container.updateMenuElement(scroll_frame, inc_class_id, s
 		local v = getFilteredClassEntry(_stats["all"][map_id][class_id], selected_source_kind)
 		if v == nil or class_id == inc_class_id or selected_class_entry == nil or total_map_entry == nil then
 			entry_data[class_id] = {}
-			local class_str, _, _ = GetClassInfo(class_id)
+			local class_str = class_id == "all" and "all" or select(1, GetClassInfo(class_id))
 			entry_data[class_id]["Class"] = class_str
 			entry_data[class_id]["# Deaths"] = "-"
 			entry_data[class_id]["% of all"] = "-"

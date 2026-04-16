@@ -121,11 +121,13 @@ function Deathlog_CRTWidget_applySettings()
 				end
 			end
 		elseif deathlog_settings[widget_name]["crt_metric"] == "Normalized Score" then
+			local log_normal_all = DeathlogDataCopy.PRECOMPUTED_LOG_NORMAL_PARAMS["all"]
+			if not log_normal_all or not log_normal_all[1] then return end
 			local most_deadly_units_normalized = DeathlogGetOrderedNormalized(
 				DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS,
 				{ "all", "all", "all", nil },
-				DeathlogDataCopy.PRECOMPUTED_LOG_NORMAL_PARAMS["all"][1][1],
-				DeathlogDataCopy.PRECOMPUTED_LOG_NORMAL_PARAMS["all"][1][2]
+				log_normal_all[1][1],
+				log_normal_all[1][2]
 			)
 
 			for k, v in ipairs(most_deadly_units_normalized) do
@@ -136,9 +138,15 @@ function Deathlog_CRTWidget_applySettings()
 		end
 	end
 
-	for k, v in pairs(DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS["all"]["all"]["all"]) do
-		if id_to_npc[k] then
-			creature_avg_lvl[id_to_npc[k]] = v["avg_lvl"]
+	local all_stats = DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS
+		and DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS["all"]
+		and DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS["all"]["all"]
+		and DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS["all"]["all"]["all"]
+	if all_stats then
+		for k, v in pairs(all_stats) do
+			if id_to_npc[k] then
+				creature_avg_lvl[id_to_npc[k]] = v["avg_lvl"]
+			end
 		end
 	end
 
