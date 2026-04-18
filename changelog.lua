@@ -17,6 +17,11 @@ local GetAddOnMetadata = C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetad
 -- Current version from TOC
 local CURRENT_VERSION = GetAddOnMetadata("Deathlog", "Version") or "0.0.0"
 
+-- Versions with no user-facing changes; the changelog popup will be suppressed for these.
+local NO_CHANGELOG_VERSIONS = {
+    -- ["0.5.8"] = true,
+}
+
 -- Changelog content (update this with each release)
 local CHANGELOG_CONTENT = [[
 |cFFFFD700Deathlog Changelog|r
@@ -238,7 +243,7 @@ local function checkShowChangelog()
 	-- 1b. No previous version but user has other settings (existing user upgrading to 0.4.4+)
 	-- 2. User hasn't dismissed the changelog for this version
 	local is_upgrade = (last_version and last_version ~= CURRENT_VERSION) or is_existing_user
-	if is_upgrade and last_changelog_version ~= CURRENT_VERSION then
+	if is_upgrade and last_changelog_version ~= CURRENT_VERSION and not NO_CHANGELOG_VERSIONS[CURRENT_VERSION] then
 		-- Delay slightly to ensure UI is ready
 		C_Timer.After(3, showChangelog)
 	end

@@ -1,5 +1,10 @@
 # Changelog
 
+## V15 — 2026-04-18
+
+### Changes
+- Real version bump to 15; previous version was not bumped to 14 which could cause issues with version checks in host addons
+
 ## V14 — 2026-04-15
 
 ### New Features

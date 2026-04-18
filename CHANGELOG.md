@@ -2,6 +2,11 @@
 
 All notable changes to Deathlog will be documented in this file.
 
+## [0.5.8] - 2026-04-18
+
+### Improvements
+- Changelog now only shows in case a real user facing change is made, not for internal version bumps that don't affect functionality (e.g. V14 → V15)
+
 ## [0.5.7] - 2026-04-16
 
 ### Bug Fixes
