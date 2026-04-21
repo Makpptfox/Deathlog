@@ -11,29 +11,29 @@ local class_bg_tex = nil
 local main_font = Deathlog_L.main_font
 
 local tmap = {
-	["Warrior"] = { 0, 0.25, 0, 0.25 },
-	["Mage"] = { 0.25, 0.5, 0, 0.25 },
-	["Rogue"] = { 0.5, 0.75, 0, 0.25 },
-	["Druid"] = { 0.75, 1, 0, 0.25 },
-	["Hunter"] = { 0, 0.25, 0.25, 0.5 },
-	["Shaman"] = { 0.25, 0.5, 0.25, 0.5 },
-	["Priest"] = { 0.5, 0.75, 0.25, 0.5 },
-	["Warlock"] = { 0.75, 1, 0.25, 0.5 },
-	["Paladin"] = { 0, 0.25, 0.5, 0.75 },
+	["WARRIOR"] = { 0, 0.25, 0, 0.25 },
+	["MAGE"] = { 0.25, 0.5, 0, 0.25 },
+	["ROGUE"] = { 0.5, 0.75, 0, 0.25 },
+	["DRUID"] = { 0.75, 1, 0, 0.25 },
+	["HUNTER"] = { 0, 0.25, 0.25, 0.5 },
+	["SHAMAN"] = { 0.25, 0.5, 0.25, 0.5 },
+	["PRIEST"] = { 0.5, 0.75, 0.25, 0.5 },
+	["WARLOCK"] = { 0.75, 1, 0.25, 0.5 },
+	["PALADIN"] = { 0, 0.25, 0.5, 0.75 },
 }
 
 local rmap = {
 	["Human"] = { 0, 0.25, 0, 0.25 },
 	["Dwarf"] = { 0.25, 0.5, 0, 0.25 },
 	["Gnome"] = { 0.5, 0.75, 0, 0.25 },
-	["Night Elf"] = { 0.75, 1, 0, 0.25 },
+	["NightElf"] = { 0.75, 1, 0, 0.25 },
 	["Tauren"] = { 0, 0.25, 0.25, 0.5 },
-	["Undead"] = { 0.25, 0.5, 0.25, 0.5 },
+	["Scourge"] = { 0.25, 0.5, 0.25, 0.5 },
 	["Troll"] = { 0.5, 0.75, 0.25, 0.5 },
 	["Orc"] = { 0.75, 1, 0.25, 0.5 },
 }
 if GetExpansionLevel and GetExpansionLevel() >= 1 then
-	rmap["Blood Elf"] = { 0, 0.25, 0.5, 0.75 }
+	rmap["BloodElf"] = { 0, 0.25, 0.5, 0.75 }
 	rmap["Draenei"] = { 0.25, 0.5, 0.5, 0.75 }
 end
 
@@ -270,16 +270,16 @@ local subtitle_metadata = {
 		20,
 		function(_entry)
       if _entry.player_data["class_id"] == nil then return "" end
-			local class_str, _, _ = GetClassInfo(_entry.player_data["class_id"])
-			if class_str then
+			local _, class_token, _ = GetClassInfo(_entry.player_data["class_id"])
+			if class_token and tmap[class_token] then
 				local msg = "|TInterface\\WorldStateFrame\\ICONS-CLASSES:16:16:0:0:64:64:"
-					.. tmap[class_str][1] * 64
+					.. tmap[class_token][1] * 64
 					.. ":"
-					.. tmap[class_str][2] * 64
+					.. tmap[class_token][2] * 64
 					.. ":"
-					.. tmap[class_str][3] * 64
+					.. tmap[class_token][3] * 64
 					.. ":"
-					.. tmap[class_str][4] * 64
+					.. tmap[class_token][4] * 64
 					.. "|t"
 
 				return msg
@@ -293,16 +293,16 @@ local subtitle_metadata = {
 		20,
 		function(_entry)
       if _entry.player_data["class_id"] == nil then return "" end
-			local class_str, _, _ = GetClassInfo(_entry.player_data["class_id"])
-			if class_str then
+			local _, class_token, _ = GetClassInfo(_entry.player_data["class_id"])
+			if class_token and tmap[class_token] then
 				local msg = "|TInterface\\ARENAENEMYFRAME\\UI-CLASSES-CIRCLES:16:16:0:0:64:64:"
-					.. tmap[class_str][1] * 64
+					.. tmap[class_token][1] * 64
 					.. ":"
-					.. tmap[class_str][2] * 64
+					.. tmap[class_token][2] * 64
 					.. ":"
-					.. tmap[class_str][3] * 64
+					.. tmap[class_token][3] * 64
 					.. ":"
-					.. tmap[class_str][4] * 64
+					.. tmap[class_token][4] * 64
 					.. "|t"
 
 				return msg
@@ -319,15 +319,15 @@ local subtitle_metadata = {
 				return ""
 			end
 			local race_info = C_CreatureInfo.GetRaceInfo(_entry.player_data["race_id"])
-			if race_info and race_info.raceName and rmap[race_info.raceName] and _entry.player_data["level"] then
+			if race_info and race_info.clientFileString and rmap[race_info.clientFileString] and _entry.player_data["level"] then
 				local msg = "|TInterface\\Glues\\CHARACTERCREATE\\UI-CHARACTERCREATE-RACES.PNG:16:16:0:0:64:64:"
-					.. rmap[race_info.raceName][1] * 64
+					.. rmap[race_info.clientFileString][1] * 64
 					.. ":"
-					.. rmap[race_info.raceName][2] * 64
+					.. rmap[race_info.clientFileString][2] * 64
 					.. ":"
-					.. rmap[race_info.raceName][3] * 64 + (_entry.player_data["level"] % 2) * 32
+					.. rmap[race_info.clientFileString][3] * 64 + (_entry.player_data["level"] % 2) * 32
 					.. ":"
-					.. rmap[race_info.raceName][4] * 64 + (_entry.player_data["level"] % 2) * 32
+					.. rmap[race_info.clientFileString][4] * 64 + (_entry.player_data["level"] % 2) * 32
 					.. "|t"
 
 				return msg

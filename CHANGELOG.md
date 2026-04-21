@@ -2,6 +2,12 @@
 
 All notable changes to Deathlog will be documented in this file.
 
+## [0.5.9] - 2026-04-21
+
+### Bug Fixes
+- Fixed race icon (RaceLogoSquare) not displaying for non-English clients — `rmap` now uses the locale-independent `clientFileString` (e.g. `"NightElf"`) instead of the localized `raceName`
+- Fixed class icon (ClassLogo1/ClassLogo2) not displaying for non-English clients — texture map now uses the locale-independent class token (e.g. `"ROGUE"`) instead of the localized class name
+
 ## [0.5.8] - 2026-04-18
 
 ### Improvements

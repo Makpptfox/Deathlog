@@ -26,6 +26,11 @@ local NO_CHANGELOG_VERSIONS = {
 local CHANGELOG_CONTENT = [[
 |cFFFFD700Deathlog Changelog|r
 
+|cFF00FF00[0.5.9] - 2026-04-21|r
+
+|cFFFFFFFFBug Fixes|r
+- Fixed class and race icons not showing in the Minilog for players on non-English game clients
+
 |cFF00FF00[0.5.7] - 2026-04-16|r
 
 |cFFFFFFFFBug Fixes|r
