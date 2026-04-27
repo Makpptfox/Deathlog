@@ -16,6 +16,8 @@ interfere with the death-alert or sync protocols.
 Wire format (fields separated by COMM_FIELD_DELIM "~"):
   V$TAG~version~       – version announcement (PARTY/RAID/GUILD/INSTANCE_CHAT)
   N$TAG~version~       – newer-version notification (WHISPER response)
+  dnl_ver~             - version of the sender's DNL library (integer string), only in N$ for new peers
+  char_guid~           - char_guid : UnitGUID("player") of the sender, only in N$ for new peers
 --]]
 
 local _dnl = DeathNotificationLib.Internal ---@class _dnl
@@ -33,6 +35,9 @@ local CMD_NEWER_NOTIFY     = "N"
 --- Per-session tracking: once a tag has warned, it won't warn again.
 --- { [tag] = true }
 local warned_versions = {}
+
+--- Set once a "newer DNL library" warning has been shown this session.
+local warned_dnl_version = false
 
 ---------------------------------------------------------------------------
 -- Shared version-upgrade notification (used by both VersionCheck and Sync)
@@ -167,20 +172,25 @@ local function handleVersionAnnounce(sender, tag, remote_ver, chatType)
 	if cmp > 0 then
 		_dnl.notifyNewerVersion(tag, remote_ver)
 	elseif cmp < 0 then
-		-- Remote is older — whisper them our version so they know
+		-- Remote is older — whisper them our version so they know.
+		-- Fields: dnl_ver, char_guid — old clients ignore extra fields.
 		local msg = CMD_NEWER_NOTIFY
 			.. _dnl.COMM_COMMAND_DELIM
 			.. tag .. _dnl.COMM_FIELD_DELIM
 			.. local_addon.addon_version .. _dnl.COMM_FIELD_DELIM
+			.. tostring(DeathNotificationLib.VERSION) .. _dnl.COMM_FIELD_DELIM
+			.. (UnitGUID("player") or "") .. _dnl.COMM_FIELD_DELIM
 		sendAddonMsg(_dnl.VERSION_CHECK_COMM_NAME, msg, "WHISPER", sender)
 	end
 end
 
 ---Handle a newer-version whisper notification.
----@param sender string  Sender character name
----@param tag string     3-char addon tag
----@param remote_ver string  The sender's (newer) version
-local function handleNewerNotify(sender, tag, remote_ver)
+---@param sender string           Sender character name
+---@param tag string              3-char addon tag
+---@param remote_ver string       The sender's (newer) addon version
+---@param remote_dnl_ver string|nil  The sender's DNL library version (integer string), nil for old peers
+---@param remote_char_guid string|nil  UnitGUID of the sender's character, nil for old peers
+local function handleNewerNotify(sender, tag, remote_ver, remote_dnl_ver, remote_char_guid)
 	if sender == UnitName("player") then return end
 	if not remote_ver or remote_ver == "" then return end
 
@@ -190,6 +200,17 @@ local function handleNewerNotify(sender, tag, remote_ver)
 	if not local_addon or not local_addon.addon_version then return end
 
 	_dnl.notifyNewerVersion(tag, remote_ver)
+
+	-- Check if the sender is running a newer DNL library than us.
+	if not warned_dnl_version and remote_dnl_ver and remote_dnl_ver ~= "" then
+		local remote_dnl_int = tonumber(remote_dnl_ver)
+		if remote_dnl_int and remote_dnl_int > DeathNotificationLib.VERSION then
+			warned_dnl_version = true
+			print(string.format(
+				"|cffFFFF00[DeathNotificationLib]|r A newer library version (v%d) is available — you are running v%d. Please update!",
+				remote_dnl_int, DeathNotificationLib.VERSION))
+		end
+	end
 end
 
 ---------------------------------------------------------------------------
@@ -215,18 +236,19 @@ function _dnl.handleVersionCheckAddonMessage(arg)
 	local command, payload = string.split(_dnl.COMM_COMMAND_DELIM, message)
 	if not command or not payload then return end
 
-	-- Parse "TAG~version~" from payload
-	local tag, remote_ver
+	-- Parse "TAG~version~[dnl_ver~char_guid~]" from payload
 	local iter = payload:gmatch("(.-)~")
-	tag = iter()
-	remote_ver = iter()
+	local tag              = iter()
+	local remote_ver       = iter()
+	local remote_dnl_ver   = iter()  -- nil for old peers
+	local remote_char_guid = iter()  -- nil for old peers
 
 	if not tag or not remote_ver then return end
 
 	if command == CMD_VERSION_ANNOUNCE then
 		handleVersionAnnounce(sender, tag, remote_ver, chatType)
 	elseif command == CMD_NEWER_NOTIFY then
-		handleNewerNotify(sender, tag, remote_ver)
+		handleNewerNotify(sender, tag, remote_ver, remote_dnl_ver, remote_char_guid)
 	end
 end
 

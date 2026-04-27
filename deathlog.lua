@@ -180,6 +180,34 @@ local function ensureNameIndex(realmName)
 	end
 end
 
+--- Returns true if player_data represents a known-fake (i.e. hunter feign-death bug) or purged death and should be suppressed.
+--- Checks static and runtime purge lists, plus identical map_pos against all stored entries for the same player (a reliable fabrication signal).
+local function deathlog_isFilteredEntry(player_data)
+	local realm = GetRealmName()
+	local cs = DeathNotificationLib.Fletcher16(player_data)
+
+	if deathlog_purged[realm] and deathlog_purged[realm][cs] then
+		return true
+	end
+
+	if DeathlogDataCopy.PRECOMPUTED_PURGES[realm] and DeathlogDataCopy.PRECOMPUTED_PURGES[realm][cs] then
+		return true
+	end
+
+	local new_pos = player_data["map_pos"]
+	local pname = player_data["name"]
+	if new_pos and pname and name_index[realm] and name_index[realm][pname] then
+		for existing_cs, _ in pairs(name_index[realm][pname]) do
+			local stored = deathlog_data[realm] and deathlog_data[realm][existing_cs]
+			if stored and stored["map_pos"] == new_pos then
+				return true
+			end
+		end
+	end
+
+	return false
+end
+
 local function newEntry(_player_data, _checksum, num_peer_checks, in_guild, source)
 	local realmName = GetRealmName()
 
@@ -196,16 +224,8 @@ local function newEntry(_player_data, _checksum, num_peer_checks, in_guild, sour
 	local player_name = _player_data["name"]
 	local current_time = _player_data["date"] or GetServerTime()
 
-	-- Reject entries that were previously purged (e.g. false Feign Death)
-	local modified_cs = DeathNotificationLib.Fletcher16(_player_data)
-
-	if deathlog_purged[realmName] and deathlog_purged[realmName][modified_cs] then
-		return
-	end
-
-	if DeathlogDataCopy.PRECOMPUTED_PURGES[realmName] and DeathlogDataCopy.PRECOMPUTED_PURGES[realmName][modified_cs] then
-		return
-	end
+	-- Reject entries that should be filtered
+	if deathlog_isFilteredEntry(_player_data) then return end
 
 	-- Check ALL existing entries for this player name for near-duplicate deaths.
 	-- The old approach only checked the single latest entry via deathlog_data_map,
@@ -381,6 +401,7 @@ local function handleEvent(self, event, ...)
 
 		deathlog_settings["DeathAlert"] = deathlog_settings["DeathAlert"] or {}
 		deathlog_settings["DeathAlert"]["death_alert_options_parent"] = "Deathlog"
+		deathlog_settings["DeathAlert"]["alertFilter"] = deathlog_isFilteredEntry
 
 		-- Ensure realm sub-tables exist so AttachAddon receives valid table
 		-- references (not nil) that remain in sync with newEntry.

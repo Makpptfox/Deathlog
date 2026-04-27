@@ -1,9 +1,9 @@
 # Changelog
 
-## 1776470400
+## 1777248000
 
 ### vanilla
-- 1,333,249 entries as of April 18, 2026
+- 1,335,691 entries as of April 28, 2026
 
 ### tbc
-- 1,335,106 entries as of April 18, 2026
+- 1,337,606 entries as of April 28, 2026

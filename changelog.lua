@@ -19,7 +19,8 @@ local CURRENT_VERSION = GetAddOnMetadata("Deathlog", "Version") or "0.0.0"
 
 -- Versions with no user-facing changes; the changelog popup will be suppressed for these.
 local NO_CHANGELOG_VERSIONS = {
-    -- ["0.5.8"] = true,
+    ["0.5.8"] = true,
+	["0.5.10"] = true,
 }
 
 -- Changelog content (update this with each release)

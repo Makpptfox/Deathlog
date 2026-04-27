@@ -2,6 +2,11 @@
 
 All notable changes to Deathlog will be documented in this file.
 
+## [0.5.10] - 2026-04-28
+
+### Improvements
+- Death Alerts are now also filtered based on purge status
+
 ## [0.5.9] - 2026-04-21
 
 ### Bug Fixes

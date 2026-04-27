@@ -165,6 +165,7 @@ local defaults = {
 	["accent_color_a"]      = 1,
 	["current_zone_filter"] = false,
 	["alert_sound"]         = "default_hardcore",
+	["alertFilter"]         = nil,
 }
 
 local function applyDefaults(force)
@@ -451,6 +452,14 @@ local environment_damage_icons = {
 function _dnl.playDeathAlert(entry)
 	local s = S()
 	if not s or s["enable"] == false then return end
+
+	-- Alert filter: the alert-owner addon may veto individual entries via
+	-- settings["DeathAlert"]["alertFilter"]. Only the owning addon's filter
+	-- is consulted, so other addons cannot interfere with alert decisions.
+	if s["alertFilter"] then
+		local ok, result = pcall(s["alertFilter"], entry)
+		if ok and result then return end
+	end
 
 	-- Ensure the alert frame has been fully initialized (textures, font, etc.)
 	if not death_alert_frame or not death_alert_frame.textures then

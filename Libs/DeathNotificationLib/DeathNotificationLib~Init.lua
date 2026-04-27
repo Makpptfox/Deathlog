@@ -2,7 +2,7 @@
 DeathNotificationLib~Init.lua
 --]]
 
-local VERSION = 15
+local VERSION = 16
 
 if DeathNotificationLib and (DeathNotificationLib.VERSION or 0) >= VERSION then return end
 
@@ -271,6 +271,7 @@ _dnl.tag_to_addon = {}
 ---@field current_zone_filter boolean|nil Only show deaths in current zone (default false)
 ---@field alert_sound string|nil Sound key: "default_hardcore"|"random"|any LSM key (default "default_hardcore")
 ---@field death_alert_options_parent string|nil Blizzard settings parent category name for the DeathAlert options panel (default "Deathlog")
+---@field alertFilter fun(entry: PlayerData): boolean|nil Optional per-entry veto; return true to suppress the alert. Only the alert-owning addon's filter is consulted.
 
 --- Persistent death entry stored by checksum.
 ---@alias DNL_DBEntry PlayerData

@@ -1,5 +1,11 @@
 # Changelog
 
+## V16 — 2026-04-28
+
+### New Features
+- **DNL version propagation** — the `N$` version-check whisper reply now includes a third field with the sender's DNL library version (integer). Old peers ignore the extra field; new peers use it to detect when a newer DNL library is available and print a once-per-session chat warning
+- **Death alert filter callback** — `DNL_DeathAlertSettings` now accepts an `alertFilter` function. `playDeathAlert` calls it via `pcall` before playing any sound or showing any UI; returning `true` suppresses the alert
+
 ## V15 — 2026-04-18
 
 ### Changes
