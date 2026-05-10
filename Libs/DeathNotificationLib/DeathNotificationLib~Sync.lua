@@ -26,6 +26,9 @@ local CTL = _G.ChatThrottleLib
 -- Constants
 ---------------------------------------------------------------------------
 
+local debug = _dnl.DEBUG
+debug = false
+
 _dnl.SYNC_CHANNEL_BASE = "hcdeathlogsyncchannel"
 
 _dnl.sync_channel = _dnl.SYNC_CHANNEL_BASE
@@ -291,7 +294,7 @@ local function startAbsoluteTimeout()
 	absolute_timer = C_Timer.NewTimer(ABSOLUTE_TIMEOUT, function()
 		absolute_timer = nil
 		if state ~= SYNC_STATE.IDLE then
-			if _dnl.DEBUG then
+			if debug then
 				print("[DNL Sync] Absolute timeout (" .. ABSOLUTE_TIMEOUT .. "s) — force-resetting to IDLE")
 			end
 			resetToIdle()
@@ -543,7 +546,7 @@ function _dnl.handleSyncWatermark(sender, payload)
 	wipe(watermark_peers)
 	watermark_peers[sender .. ":" .. tag] = { ts = ts, count = count, window = window, tag = tag }
 
-	if _dnl.DEBUG then
+	if debug then
 		print(string.format("[DNL Sync] Behind peer %s (tag=%s) by %d entries, collecting watermarks…",
 			sender, tag, count - local_count))
 	end
@@ -566,7 +569,7 @@ function _dnl._syncPickPeerAndJitter()
 	-- Abort if E$ traffic appeared during the collect window — another
 	-- sync session is already streaming and we should just consume passively.
 	if GetServerTime() - last_entry_seen_time < CHANNEL_BUSY_COOLDOWN then
-		if _dnl.DEBUG then
+		if debug then
 			print("[DNL Sync] Channel busy (E$ seen recently) — aborting sync trigger")
 		end
 		resetToIdle()
@@ -608,7 +611,7 @@ function _dnl._syncPickPeerAndJitter()
 	state = SYNC_STATE.JITTER_WAIT
 
 	local jitter = math.random() * JITTER_MAX
-	if _dnl.DEBUG then
+	if debug then
 		print(string.format("[DNL Sync] Best peer: %s (tag=%s, gap=%d). Jitter: %.1fs",
 			sender_name, best_tag, best_gap, jitter))
 	end
@@ -655,7 +658,7 @@ function _dnl._syncSendBucketRequest()
 	state = SYNC_STATE.AWAITING_ENTRIES
 	stats.entries_received = 0
 
-	if _dnl.DEBUG then
+	if debug then
 		print(string.format("[DNL Sync] Sending bucket request to %s (%d days, %d buckets)",
 			sync_partner, window, #sorted))
 	end
@@ -792,7 +795,7 @@ function _dnl.handleSyncBucketRequest(sender, payload)
 	local resp_addon = addonForTag(req.tag)
 	if not resp_addon or not resp_addon.db then return end
 
-	if _dnl.DEBUG then
+	if debug then
 		local bc = 0; for _ in pairs(req.buckets) do bc = bc + 1 end
 		print(string.format("[DNL Sync] Bucket request from %s (tag=%s): window=%d, %d day-buckets",
 			req.sender, req.tag, req.window_days, bc))
@@ -806,7 +809,7 @@ function _dnl.handleSyncBucketRequest(sender, payload)
 	responding_timer = C_Timer.NewTimer(RESPONDING_TIMEOUT, function()
 		responding_timer = nil
 		if state == SYNC_STATE.RESPONDING_ENTRIES then
-			if _dnl.DEBUG then
+			if debug then
 				print("[DNL Sync] Responding timeout \226\128\148 resetting to IDLE")
 			end
 			resetToIdle()
@@ -849,7 +852,7 @@ function _dnl.handleSyncBucketRequest(sender, payload)
 	end
 
 	if #to_send == 0 then
-		if _dnl.DEBUG then
+		if debug then
 			print("[DNL Sync] No entries to send (requester is up to date)")
 		end
 		cancelTimer(responding_timer)
@@ -858,7 +861,7 @@ function _dnl.handleSyncBucketRequest(sender, payload)
 		return
 	end
 
-	if _dnl.DEBUG then
+	if debug then
 		print(string.format("[DNL Sync] Streaming %d entries across %d short days",
 			#to_send, #short_days))
 	end
@@ -877,7 +880,7 @@ function _dnl.handleSyncBucketRequest(sender, payload)
 			cancelTimer(responding_timer)
 			responding_timer = nil
 			state = SYNC_STATE.IDLE
-			if _dnl.DEBUG then
+			if debug then
 				print(string.format("[DNL Sync] Finished streaming %d entries", queued))
 			end
 			return
@@ -910,7 +913,7 @@ function _dnl.handleSyncBucketRequest(sender, payload)
 				if elen > MAX_PAYLOAD then
 					-- Single entry exceeds budget (should not happen after
 					-- encodeMessage truncation, but guard defensively).
-					if _dnl.DEBUG then
+					if debug then
 						print("[DNL Sync] WARNING: encoded entry exceeds MAX_PAYLOAD ("
 							.. elen .. " > " .. MAX_PAYLOAD .. "), skipping")
 					end
@@ -940,7 +943,7 @@ function _dnl.handleSyncBucketRequest(sender, payload)
 			cancelTimer(responding_timer)
 			responding_timer = nil
 			state = SYNC_STATE.IDLE
-			if _dnl.DEBUG then
+			if debug then
 				print(string.format("[DNL Sync] Finished streaming %d entries", queued))
 			end
 		end
@@ -1070,7 +1073,7 @@ function _dnl.handleSyncEntry(sender, payload)
 		cancelTimer(jitter_timer)
 		jitter_timer = nil
 		state = SYNC_STATE.IDLE
-		if _dnl.DEBUG then
+		if debug then
 			print("[DNL Sync] Another requester active — consuming passively")
 		end
 	end
@@ -1097,7 +1100,7 @@ function _dnl._syncFinish(reason)
 	stats.last_sync_entries = received
 	stats.entries_received  = 0
 
-	if _dnl.DEBUG and received > 0 then
+	if debug and received > 0 then
 		print(string.format("[DNL Sync] Sync %s: received %d entries", reason, received))
 	end
 
@@ -1154,7 +1157,7 @@ function _dnl._stopSyncWatermarkTicker()
 	if watermark_ticker then
 		cancelTimer(watermark_ticker)
 		watermark_ticker = nil
-		if _dnl.DEBUG then
+		if debug then
 			print("[DNL Sync] Watermark ticker stopped")
 		end
 	end
@@ -1189,7 +1192,7 @@ function _dnl._startSyncWatermarkTicker()
 	end
 	C_Timer.After(initial_delay + 1, scheduleNext)
 
-	if _dnl.DEBUG then
+	if debug then
 		print(string.format("[DNL Sync] Watermark ticker started (base interval: %ds, initial delay: %.0fs)",
 			min_interval, initial_delay))
 	end
@@ -1258,7 +1261,7 @@ function _dnl.handleSyncAddonMessage(arg)
 	local command, msg = string.split(_dnl.COMM_COMMAND_DELIM, arg[2])
 	local sender_short, _ = string.split("-", arg[4])
 
-	if _dnl.DEBUG then
+	if debug then
 		local label = SYNC_CMD_LABELS[command] or command
 		local preview = msg and msg:sub(1, 80) or ""
 		print(string.format("|cff00CCFF[Deathlog Sync]|r ADDON %s from %s: %s%s",
@@ -1283,7 +1286,7 @@ function _dnl.handleSyncChannelMessage(arg)
 	-- Ignore our own channel messages echoed back
 	if sender_short == UnitName("player") then return end
 
-	if _dnl.DEBUG then
+	if debug then
 		local label = SYNC_CMD_LABELS[command] or command
 		local preview = msg and msg:sub(1, 80) or ""
 		print(string.format("|cff00CCFF[Deathlog Sync]|r CHANNEL %s from %s: %s%s",
@@ -1305,7 +1308,7 @@ _dnl.registerInputDrain(sendNextInQueue)
 -- Expose internals for testing
 ---------------------------------------------------------------------------
 
-if _dnl.DEBUG then
+if debug then
 	_dnl.SYNC_STATE             = SYNC_STATE
 	_dnl._syncState             = function() return state end
 	_dnl._syncSetState          = function(s) state = s end

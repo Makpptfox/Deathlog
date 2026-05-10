@@ -93,21 +93,23 @@ end
 -- Channel management
 ---------------------------------------------------------------------------
 
---- Re-check CVars, HardcoreDeaths channel membership, and keep our
+--- Re-check CVars, Blizzard Hardcore death channel membership, and keep our
 --- addon channels hidden on every zone change so nothing drifts.
 local function updateChannels()
-	if _dnl.anyAddonEnables("auto_blizzard_deaths") then
-		if GetChannelName("HardcoreDeaths") == 0 then
+	local channelName = _G["HARDCORE_DEATHS"]
+
+	if channelName and _dnl.anyAddonEnables("auto_blizzard_deaths") then
+		if GetChannelName(channelName) == 0 then
 			C_Timer.After(2.5, function()
-				if GetChannelName("HardcoreDeaths") == 0 then
-					JoinChannelByName("HardcoreDeaths", nil, nil, false)
+				if GetChannelName(channelName) == 0 then
+					JoinChannelByName(channelName, nil, nil, false)
 				end
 			end)
 		end
 ---@diagnostic disable: param-type-mismatch
 		SetCVar("hardcoreDeathAlertType", 2)
 		SetCVar("hardcoreDeathChatType", 1)
----diagnostic enable: param-type-mismatch
+---@diagnostic enable: param-type-mismatch
 	end
 
 	_dnl.hideChannelFromChatFrames(_dnl.death_alerts_channel or _dnl.DEATH_ALERTS_CHANNEL_BASE)

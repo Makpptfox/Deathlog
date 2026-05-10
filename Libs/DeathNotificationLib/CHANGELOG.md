@@ -1,5 +1,10 @@
 # Changelog
 
+## V17 — 2026-05-10
+
+### Bug Fixes
+- Blizzard Hardcore death channel setup now uses Blizzard's localized `_G["HARDCORE_DEATHS"]` channel name and skips setup when that global is unavailable, avoiding fake `HardcoreDeaths` joins on localized clients
+
 ## V16 — 2026-04-28
 
 ### New Features
