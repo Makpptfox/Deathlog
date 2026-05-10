@@ -80,21 +80,24 @@ function _dnl.guessLocationForUnit(unit)
 	return instance_id, map, position
 end
 
-
 ---Resolve a death source name (NPC, environment, or PvP player) to a numeric source_id.
----Returns source_id (-1 if unresolved) and optional extra_data (e.g. pvp_source_name).
+---Returns source_id (-1 if unresolved) and optional extra_data (e.g. pvp_source_name, killer_health).
 ---@param death_source_name string|nil          NPC name, env damage name, or player name
 ---@param death_source_guid string|nil          Source GUID (improves PvP/NPC resolution)
+---@param death_source_health string|nil        Formatted killer health captured from the source unit token
 ---@param try_all_locales boolean|nil           When true, iterate every loaded locale's NPC_TO_ID as a last resort (for cross-locale names from HardcoreTBC / UltraHardcore)
 ---@return number death_source
 ---@return table|nil extra_data
-function _dnl.resolveDeathSource(death_source_name, death_source_guid, try_all_locales)
+function _dnl.resolveDeathSource(death_source_name, death_source_guid, death_source_health, try_all_locales)
 	local death_source = -1
 	local extra_data = nil
 
 	if death_source_name then
 		if _dnl.D.NPC_TO_ID[death_source_name] then
 			death_source = _dnl.resolveId(_dnl.D.NPC_TO_ID[death_source_name])
+			if death_source and death_source_health then
+				extra_data = { ["killer_health"] = death_source_health }
+			end
 		elseif _dnl.ENVIRONMENT_DAMAGE_TO_ID[death_source_name] then
 			death_source = _dnl.ENVIRONMENT_DAMAGE_TO_ID[death_source_name]
 		else
@@ -103,6 +106,10 @@ function _dnl.resolveDeathSource(death_source_name, death_source_guid, try_all_l
 				death_source = pvp_source
 				if pvp_source_name then
 					extra_data = { ["pvp_source_name"] = pvp_source_name }
+				end
+				if death_source_health then
+					extra_data = extra_data or {}
+					extra_data["killer_health"] = death_source_health
 				end
 			end
 		end
@@ -113,12 +120,19 @@ function _dnl.resolveDeathSource(death_source_name, death_source_guid, try_all_l
 		if unit_type == "Creature" or unit_type == "Vehicle" then
 			local _, _, _, _, _, npc_id, _ = strsplit("-", death_source_guid)
 			death_source = tonumber(npc_id) or death_source
+			if death_source ~= -1 and death_source_health then
+				extra_data = { ["killer_health"] = death_source_health }
+			end
 		elseif unit_type == "Player" then
 			local success, pvp_source, pvp_source_name = _dnl.encodePvpSource(death_source_name, death_source_guid)
 			if success then
 				death_source = pvp_source
 				if pvp_source_name then
 					extra_data = { ["pvp_source_name"] = pvp_source_name }
+				end
+				if death_source_health then
+					extra_data = extra_data or {}
+					extra_data["killer_health"] = death_source_health
 				end
 			end
 		end
@@ -133,6 +147,9 @@ function _dnl.resolveDeathSource(death_source_name, death_source_guid, try_all_l
 		for _, localeData in pairs(_dnl.L) do
 			if localeData.NPC_TO_ID and localeData.NPC_TO_ID[death_source_name] then
 				death_source = _dnl.resolveId(localeData.NPC_TO_ID[death_source_name])
+				if death_source and death_source_health then
+					extra_data = { ["killer_health"] = death_source_health }
+				end
 				break
 			end
 		end
@@ -311,7 +328,7 @@ function _dnl.reportPartyRaidDeath(unit)
 	end
 
 	local unitState = _dnl.getUnitState(unit)
-	local death_source, extra_data = _dnl.resolveDeathSource(unitState.last_attack_source_name, unitState.last_attack_source_guid)
+	local death_source, extra_data = _dnl.resolveDeathSource(unitState.last_attack_source_name, unitState.last_attack_source_guid, unitState.last_attack_source_health)
 
 	local instance_id, map, position = _dnl.guessLocationForUnit(unit)
 	local pos_str = position and string.format("%.4f,%.4f", position.x, position.y) or nil

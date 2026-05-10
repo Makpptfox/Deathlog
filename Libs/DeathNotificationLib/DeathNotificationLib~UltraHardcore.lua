@@ -121,7 +121,7 @@ local function processDeathMessage(text, sender, senderGUID)
 	processed[key] = true
 
 	-- Resolve killer name to source_id
-	local source_id, extra_data = _dnl.resolveDeathSource(killer_name, nil, true)
+	local source_id, extra_data = _dnl.resolveDeathSource(killer_name, nil, nil, true)
 
 	-- Resolve location: UltraHardcore uses subZone + ", " + zone or just zone.
 	-- Try the full string first, then just the part after the last comma.

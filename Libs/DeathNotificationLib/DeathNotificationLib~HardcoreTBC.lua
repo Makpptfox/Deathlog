@@ -131,7 +131,7 @@ local function convertEvent(event)
 	local extra_data = nil
 
 	if source_name then
-		source_id, extra_data = _dnl.resolveDeathSource(source_name, nil, true)
+		source_id, extra_data = _dnl.resolveDeathSource(source_name, nil, nil, true)
 	end
 
 	-- Instance check: if map_id maps to an instance, split accordingly

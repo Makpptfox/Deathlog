@@ -1481,6 +1481,11 @@ function _dnl.testIntegration()
 				record("resolveDeathSource: env damage no extra_data",
 					env_extra == nil)
 
+				local env_health_src, env_health_extra = _dnl.resolveDeathSource("Falling", nil, "5/10 (50%)")
+				record("resolveDeathSource: env damage ignores killer_health extra_data",
+					env_health_src == -3 and env_health_extra == nil,
+					string.format("got source=%s health=%s", tostring(env_health_src), tostring(env_health_extra and env_health_extra["killer_health"])))
+
 				-- Unknown source returns a number (may be -1 or PvP source depending
 				-- on whether the player currently has a hostile player targeted)
 				local unk_src, _ = _dnl.resolveDeathSource("SomeUnknownThing12345", nil)
@@ -1508,6 +1513,11 @@ function _dnl.testIntegration()
 						string.format("expected 448, got %s", tostring(npc_src)))
 					record("resolveDeathSource: known NPC name no extra_data",
 						npc_extra == nil)
+
+					local npc_health_src, npc_health_extra = _dnl.resolveDeathSource(npc_name, nil, "5/10 (50%)")
+					record("resolveDeathSource: known NPC adds killer_health extra_data",
+						npc_health_src == 448 and npc_health_extra and npc_health_extra["killer_health"] == "5/10 (50%)",
+						string.format("got source=%s health=%s", tostring(npc_health_src), tostring(npc_health_extra and npc_health_extra["killer_health"])))
 				end
 
 				-- Environment damage by string name
@@ -1560,13 +1570,16 @@ function _dnl.testIntegration()
 
 				-- Player GUID with unknown name should try PvP encoding
 				local player_guid_test = "Player-0-0-0-0-0-0000000005"
-				local pg_src, pg_extra = _dnl.resolveDeathSource("SomePlayerName", player_guid_test)
+				local pg_src, pg_extra = _dnl.resolveDeathSource("SomePlayerName", player_guid_test, "7/10 (70%)")
 				record("resolveDeathSource: Player GUID triggers PvP encode",
 					pg_src ~= -1,
 					string.format("got %s (should not be -1)", tostring(pg_src)))
 				record("resolveDeathSource: Player GUID pvp_source_name in extra_data",
 					pg_extra ~= nil and pg_extra["pvp_source_name"] == "SomePlayerName",
 					string.format("got %s", tostring(pg_extra and pg_extra["pvp_source_name"])))
+				record("resolveDeathSource: Player GUID keeps killer_health extra_data",
+					pg_extra ~= nil and pg_extra["killer_health"] == "7/10 (70%)",
+					string.format("got %s", tostring(pg_extra and pg_extra["killer_health"])))
 
 				-- Non-Player GUID with unknown name (Pet, GameObject) -> should be -1
 				local pet_guid = "Pet-0-0-0-0-0-0000000006"

@@ -15,7 +15,7 @@ Exported constants:
   ROOT_MAP_ID        – top-level continent map id
 
 UnitState fields per unit:
-  name, guid, recent_msg, last_attack_source_name, last_attack_source_guid
+  name, guid, recent_msg, last_attack_source_name, last_attack_source_guid, last_attack_source_health
 --]]
 
 local _dnl = DeathNotificationLib.Internal ---@class _dnl
@@ -39,6 +39,7 @@ _dnl.ROOT_MAP_ID = GetExpansionLevel and GetExpansionLevel() >= 1 and 946 or 947
 ---@field recent_msg string
 ---@field last_attack_source_name string|nil
 ---@field last_attack_source_guid string|nil
+---@field last_attack_source_health string|nil
 
 ---@type { [UnitToken]: UnitState }
 local unit_states = {}
@@ -120,6 +121,23 @@ function _dnl.findUnitTokenByName(unit_name)
 	end
 
 	return nil
+end
+
+---@param unit UnitToken|nil
+---@return string|nil
+function _dnl.getUnitHealthText(unit)
+	if not unit or not UnitExists(unit) then return nil end
+
+	local health = UnitHealth(unit)
+	if not health then return nil end
+
+	local max_health = UnitHealthMax(unit)
+	if max_health and max_health > 0 then
+		local health_percent = math.floor((health / max_health) * 100)
+		return tostring(health) .. "/" .. tostring(max_health) .. " (" .. tostring(health_percent) .. "%)"
+	end
+
+	return tostring(health)
 end
 
 ---Find a player token for a given player name, searching all avaliable token options

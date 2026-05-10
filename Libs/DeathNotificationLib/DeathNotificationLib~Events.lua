@@ -253,17 +253,22 @@ local function onCombatLogEventUnfiltered(arg)
 	if ev == "ENVIRONMENTAL_DAMAGE" then
 		local target = UnitTokenFromGUID(target_guid)
 		if _dnl.canUseUnitStates(target) then
-			_dnl.getUnitState(target).last_attack_source_name = environmental_type
-			_dnl.getUnitState(target).last_attack_source_guid = nil
+			local unit_state = _dnl.getUnitState(target)
+			unit_state.last_attack_source_name = environmental_type
+			unit_state.last_attack_source_guid = nil
+			unit_state.last_attack_source_health = nil
 		end
 	elseif source_guid ~= target_guid then
 		if ev ~= "DAMAGE_SHIELD_MISSED" and string.find(ev, "DAMAGE") ~= nil then
 			local target = UnitTokenFromGUID(target_guid)
 			if _dnl.canUseUnitStates(target) then
-				local source = source_name or GetUnitNameByGUID(source_guid) or UNKNOWN
+				local source_token = source_guid and UnitTokenFromGUID(source_guid)
+				local source = source_name or (source_guid and GetUnitNameByGUID(source_guid)) or UNKNOWN
 
-				_dnl.getUnitState(target).last_attack_source_name = source
-				_dnl.getUnitState(target).last_attack_source_guid = source_guid
+				local unit_state = _dnl.getUnitState(target)
+				unit_state.last_attack_source_name = source
+				unit_state.last_attack_source_guid = source_guid
+				unit_state.last_attack_source_health = _dnl.getUnitHealthText(source_token)
 			end
 		end
 	end
@@ -275,7 +280,7 @@ local function onPlayerDead(arg)
 
 	local userState = _dnl.getUnitState("player")
 
-	local death_source, extra_data = _dnl.resolveDeathSource(userState.last_attack_source_name, userState.last_attack_source_guid)
+	local death_source, extra_data = _dnl.resolveDeathSource(userState.last_attack_source_name, userState.last_attack_source_guid, userState.last_attack_source_health)
 	local instance_id, map, position = _dnl.guessLocationForUnit("player")
 	local pos_str = position and string.format("%.4f,%.4f", position.x, position.y) or nil
 

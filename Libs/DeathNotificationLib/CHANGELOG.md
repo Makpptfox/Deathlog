@@ -5,6 +5,9 @@
 ### Bug Fixes
 - Blizzard Hardcore death channel setup now uses Blizzard's localized `_G["HARDCORE_DEATHS"]` channel name and skips setup when that global is unavailable, avoiding fake `HardcoreDeaths` joins on localized clients
 
+### Improvements
+- Death broadcasts can now include the last attacker's health in `extra_data.killer_health` when the attacker unit can be resolved
+
 ## V16 — 2026-04-28
 
 ### New Features
