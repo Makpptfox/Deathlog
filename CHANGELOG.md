@@ -2,6 +2,11 @@
 
 All notable changes to Deathlog will be documented in this file.
 
+## [0.5.11] - 2026-05-10
+
+### Bug Fixes
+- Fixed death alerts not updating after the initial load — `DeathNotificationLib.UpdateDeathAlert()`
+
 ## [0.5.10] - 2026-04-28
 
 ### Improvements

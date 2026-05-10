@@ -491,6 +491,7 @@ local function handleEvent(self, event, ...)
 		C_Timer.After(2.5, function()
 			Deathlog_CheckCTA()
 			Deathlog_startHunterCleanup()
+			DeathNotificationLib.UpdateDeathAlert()
 		end)
 
 		if not deathlog_sync_options_registered then

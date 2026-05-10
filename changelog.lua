@@ -21,6 +21,7 @@ local CURRENT_VERSION = GetAddOnMetadata("Deathlog", "Version") or "0.0.0"
 local NO_CHANGELOG_VERSIONS = {
     ["0.5.8"] = true,
 	["0.5.10"] = true,
+	["0.5.11"] = true,
 }
 
 -- Changelog content (update this with each release)
