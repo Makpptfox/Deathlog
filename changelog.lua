@@ -28,6 +28,11 @@ local NO_CHANGELOG_VERSIONS = {
 local CHANGELOG_CONTENT = [[
 |cFFFFD700Deathlog Changelog|r
 
+|cFF00FF00[0.5.12] - 2026-05-11|r
+
+|cFFFFFFFFBug Fixes|r
+- Fixed an issue preventing death alerts from showing for certain entries
+
 |cFF00FF00[0.5.9] - 2026-04-21|r
 
 |cFFFFFFFFBug Fixes|r

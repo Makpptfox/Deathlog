@@ -2,6 +2,11 @@
 
 All notable changes to Deathlog will be documented in this file.
 
+## [0.5.12] - 2026-05-11
+
+### Bug Fixes
+- Fixed an issue preventing death alerts from showing for certain entries
+
 ## [0.5.11] - 2026-05-10
 
 ### Bug Fixes

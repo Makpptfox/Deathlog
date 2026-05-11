@@ -208,6 +208,8 @@ local function deathlog_isFilteredEntry(player_data)
 	return false
 end
 
+local deathAlertWhitelist = setmetatable({}, { __mode = "k" })
+
 local function newEntry(_player_data, _checksum, num_peer_checks, in_guild, source)
 	local realmName = GetRealmName()
 
@@ -226,6 +228,8 @@ local function newEntry(_player_data, _checksum, num_peer_checks, in_guild, sour
 
 	-- Reject entries that should be filtered
 	if deathlog_isFilteredEntry(_player_data) then return end
+
+	local alert_player_data = _player_data
 
 	-- Check ALL existing entries for this player name for near-duplicate deaths.
 	-- The old approach only checked the single latest entry via deathlog_data_map,
@@ -279,6 +283,7 @@ local function newEntry(_player_data, _checksum, num_peer_checks, in_guild, sour
 	-- Only create widgets for self-reported deaths, peer broadcasts, and Blizzard notifications.
 	-- Death alert is now handled internally by DNL (~DeathAlert.lua) via createEntry().
 	if source == SOURCE.SELF_DEATH or source == SOURCE.PEER_BROADCAST or source == SOURCE.BLIZZARD then
+		deathAlertWhitelist[alert_player_data] = true
 		Deathlog_widget_minilog_createEntry(_player_data)
 	end
 
@@ -401,7 +406,14 @@ local function handleEvent(self, event, ...)
 
 		deathlog_settings["DeathAlert"] = deathlog_settings["DeathAlert"] or {}
 		deathlog_settings["DeathAlert"]["death_alert_options_parent"] = "Deathlog"
-		deathlog_settings["DeathAlert"]["alertFilter"] = deathlog_isFilteredEntry
+		deathlog_settings["DeathAlert"]["alertFilter"] = function(player_data)
+			if deathAlertWhitelist[player_data] then
+				deathAlertWhitelist[player_data] = nil
+				return false
+			end
+
+			return deathlog_isFilteredEntry(player_data)
+		end
 
 		-- Ensure realm sub-tables exist so AttachAddon receives valid table
 		-- references (not nil) that remain in sync with newEntry.
