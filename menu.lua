@@ -2293,13 +2293,56 @@ local function drawStatisticsTab(container)
 
 	stats_menu_elements[3].configure_for = "map"
 
-	setMapRegion = function(map_id, name)
-		current_map_id = map_id
-		if name then
-			current_zone_name = name
-			modifyTitle(name)
-			modifyDescription(map_id, name)
+	local function getMapDisplayName(map_id)
+		if map_id == Deathlog_ROOT_MAP_ID then
+			return Deathlog_ROOT_MAP_NAME
 		end
+
+		local map_info = C_Map.GetMapInfo(map_id)
+		return map_info and map_info.name or nil
+	end
+
+	local function canUseZoneStatisticsMap(map_id)
+		if type(map_id) ~= "number" then
+			return false
+		end
+		if C_Map.GetMapInfo(map_id) == nil then
+			return false
+		end
+		return C_Map.GetMapArtLayerTextures(map_id, 1) ~= nil
+	end
+
+	local function getInitialZoneStatisticsMap()
+		local saved_map_id = deathlog_settings and tonumber(deathlog_settings["zone_statistics_map_id"])
+		if canUseZoneStatisticsMap(saved_map_id) then
+			return saved_map_id, getMapDisplayName(saved_map_id)
+		end
+
+		local player_map_id = C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
+		if canUseZoneStatisticsMap(player_map_id) then
+			return player_map_id, getMapDisplayName(player_map_id)
+		end
+
+		return Deathlog_ROOT_MAP_ID, Deathlog_ROOT_MAP_NAME
+	end
+
+	setMapRegion = function(map_id, name)
+		if not canUseZoneStatisticsMap(map_id) then
+			map_id = Deathlog_ROOT_MAP_ID
+			name = Deathlog_ROOT_MAP_NAME
+		else
+			name = name or getMapDisplayName(map_id) or current_zone_name or Deathlog_ROOT_MAP_NAME
+		end
+
+		current_map_id = map_id
+		current_zone_name = name
+		if deathlog_settings then
+			deathlog_settings["zone_statistics_map_id"] = map_id
+			deathlog_settings["zone_statistics_map_name"] = name
+		end
+		modifyTitle(name)
+		modifyDescription(map_id, name)
+
 		local selected_source_kind = Deathlog_GetMenuSourceKind()
 		local selected_cause_label = Deathlog_GetSourceKindLabel(selected_source_kind)
 		if selected_source_kind ~= Deathlog_GetDefaultSourceKind() then
@@ -2333,7 +2376,8 @@ local function drawStatisticsTab(container)
 		end
 	end
 
-	setMapRegion(Deathlog_ROOT_MAP_ID, Deathlog_ROOT_MAP_NAME)
+	local initial_map_id, initial_map_name = getInitialZoneStatisticsMap()
+	setMapRegion(initial_map_id, initial_map_name)
 
 	scroll_frame.frame:HookScript("OnHide", function()
 		for _, v in ipairs(stats_menu_elements) do

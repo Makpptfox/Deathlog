@@ -2,6 +2,14 @@
 
 All notable changes to Deathlog will be documented in this file.
 
+## [0.5.13] - 2026-05-25
+
+### New Features
+- Added mini log visibility controls: use `/dl minilog` to toggle it, `/dl minilog show` or `/dl minilog hide` for explicit control, or Ctrl-click the minimap button.
+
+### Improvements
+- Zone Statistics now opens to the last viewed zone when available, otherwise the player's current zone, before falling back to the root map.
+
 ## [0.5.12] - 2026-05-11
 
 ### Bug Fixes

@@ -82,6 +82,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ### Minilog Widget
 * Configurable columns and font
+* Toggle with `/dl minilog` or Ctrl-click on the minimap button
 * Playtime column available
 
 ![custom deathlog](git_images/deathlog_custom.png)

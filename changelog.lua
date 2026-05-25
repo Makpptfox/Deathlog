@@ -28,6 +28,14 @@ local NO_CHANGELOG_VERSIONS = {
 local CHANGELOG_CONTENT = [[
 |cFFFFD700Deathlog Changelog|r
 
+|cFF00FF00[0.5.13] - 2026-05-25|r
+
+|cFFFFFFFFNew Features|r
+- Added mini log visibility controls: use /dl minilog to toggle it, /dl minilog show or /dl minilog hide for explicit control, or Ctrl-click the minimap button
+
+|cFFFFFFFFImprovements|r
+- Zone Statistics now opens to the last viewed zone when available, otherwise the player's current zone, before falling back to the root map
+
 |cFF00FF00[0.5.12] - 2026-05-11|r
 
 |cFFFFFFFFBug Fixes|r

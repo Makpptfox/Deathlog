@@ -8,6 +8,7 @@ DEATHLOG_STRINGS_EN = {
 	creature_model_quote_font = "Fonts\\MORPHEUS.TTF",
 	-- words
 	minimap_btn_left_click = "|cFF666666Left Click:|r Toggle log",
+	minimap_btn_ctrl_click = "|cFF666666Ctrl-Click:|r Toggle mini log",
 	minimap_btn_shift_click = "|cFF666666Shift-Click:|r Reset position/scale",
 	minimap_btn_right_click = "|cFF666666Right Click:|r ",
 	class_word = "Class",

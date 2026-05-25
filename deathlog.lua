@@ -42,13 +42,45 @@ initVariables()
 local sync_options -- forward declaration; populated after options table
 local deathlog_sync_options_registered = false
 local deathlog_minimap_button_stub = nil
+
+local function setMiniLogShown(show)
+	if Deathlog_minilog_setShown == nil then
+		return nil
+	end
+
+	local is_shown = Deathlog_minilog_setShown(show)
+	return is_shown
+end
+
+local function toggleMiniLog()
+	if Deathlog_minilog_toggle == nil then
+		return nil
+	end
+
+	local is_shown = Deathlog_minilog_toggle()
+	return is_shown
+end
+
+local function handleMiniLogCommand(arg)
+	local action = string.match(string.lower(arg or ""), "^%s*(%S*)") or ""
+	if action == "show" or action == "on" then
+		setMiniLogShown(true)
+	elseif action == "hide" or action == "off" then
+		setMiniLogShown(false)
+	else
+		toggleMiniLog()
+	end
+end
+
 local deathlog_minimap_button = LibStub("LibDataBroker-1.1"):NewDataObject(addonName, {
 	type = "data source",
 	text = addonName,
 	icon = "Interface\\TARGETINGFRAME\\UI-TargetingFrame-Skull",
 	OnClick = function(self, btn)
 		if btn == "LeftButton" then
-			if IsShiftKeyDown() then
+			if IsControlKeyDown() then
+				toggleMiniLog()
+			elseif IsShiftKeyDown() then
 				DeathlogResetMenuPosition()
 			else
 				DeathlogToggleMenu(deathlog_data, DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS, DeathlogDataCopy.PRECOMPUTED_LOG_NORMAL_PARAMS)
@@ -60,6 +92,7 @@ local deathlog_minimap_button = LibStub("LibDataBroker-1.1"):NewDataObject(addon
 	OnTooltipShow = function(tooltip)
 		tooltip:AddLine(addonName)
 		tooltip:AddLine(Deathlog_L.minimap_btn_left_click)
+		tooltip:AddLine(Deathlog_L.minimap_btn_ctrl_click)
 		tooltip:AddLine(Deathlog_L.minimap_btn_shift_click)
 		tooltip:AddLine(Deathlog_L.minimap_btn_right_click .. GAMEOPTIONS_MENU)
 	end,
@@ -515,16 +548,22 @@ local function handleEvent(self, event, ...)
 end
 
 local function SlashHandler(msg, editbox)
-	if msg == "option" or msg == "options" then
+	local command, arg = string.match(string.lower(msg or ""), "^%s*(%S*)%s*(.-)%s*$")
+	command = command or ""
+	arg = arg or ""
+
+	if command == "option" or command == "options" then
 		Settings.OpenToCategory(addonName)
-	elseif msg == "alert" then
+	elseif command == "alert" then
 		DeathNotificationLib.TestDeathAlert()
-	elseif msg == "sync" then
+	elseif command == "sync" then
 		DeathNotificationLib.SyncStatus()
-	elseif msg == "changelog" then
+	elseif command == "changelog" then
 		if Deathlog_ShowChangelog then
 			Deathlog_ShowChangelog()
 		end
+	elseif command == "minilog" or command == "mini" or command == "mini-log" or command == "ml" then
+		handleMiniLogCommand(arg)
 	else
 		DeathlogShowMenu(deathlog_data, DeathlogDataCopy.PRECOMPUTED_GENERAL_STATS, DeathlogDataCopy.PRECOMPUTED_LOG_NORMAL_PARAMS)
 	end

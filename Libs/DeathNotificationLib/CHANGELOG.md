@@ -1,5 +1,10 @@
 # Changelog
 
+## V18 — 2026-05-25
+
+### Changes
+- Internal restructure
+
 ## V17 — 2026-05-10
 
 ### Bug Fixes

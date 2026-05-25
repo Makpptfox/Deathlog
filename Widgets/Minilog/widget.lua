@@ -688,9 +688,7 @@ local function DeathFrameDropdown(frame, level, menuList)
 	end
 
 	local function hide()
-		death_log_frame.frame:Hide()
-		death_log_icon_frame:Hide()
-		deathlog_settings[widget_name]["enable"] = false
+		Deathlog_minilog_setShown(false)
 	end
 
 	local function openSettings()
@@ -963,6 +961,26 @@ function Deathlog_minilog_applySettings(rebuild_ace)
 	end
 end
 
+function Deathlog_minilog_setShown(show)
+	applyDefaults(defaults)
+	deathlog_settings[widget_name]["enable"] = show and true or false
+	Deathlog_minilog_applySettings()
+	if show then
+		death_log_frame:Maximize()
+	end
+	return deathlog_settings[widget_name]["enable"] ~= false
+end
+
+function Deathlog_minilog_toggle()
+	applyDefaults(defaults)
+	return Deathlog_minilog_setShown(deathlog_settings[widget_name]["enable"] == false)
+end
+
+function Deathlog_minilog_isShown()
+	applyDefaults(defaults)
+	return deathlog_settings[widget_name]["enable"] ~= false
+end
+
 local function forceReset()
 	applyDefaults(defaults, true)
 	Deathlog_minilog_applySettings(true)
@@ -1009,21 +1027,10 @@ options = {
 			name = "Show death log",
 			desc = "Show death log",
 			get = function()
-				if
-					deathlog_settings[widget_name]["enable"] == nil
-					or deathlog_settings[widget_name]["enable"] == true
-				then
-					return true
-				else
-					return false
-				end
+				return Deathlog_minilog_isShown()
 			end,
 			set = function()
-				if deathlog_settings[widget_name]["enable"] == nil then
-					deathlog_settings[widget_name]["enable"] = true
-				end
-				deathlog_settings[widget_name]["enable"] = not deathlog_settings[widget_name]["enable"]
-				Deathlog_minilog_applySettings()
+				Deathlog_minilog_setShown(not Deathlog_minilog_isShown())
 			end,
 			order = 1,
 		},
