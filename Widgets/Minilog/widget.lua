@@ -886,6 +886,9 @@ function Deathlog_minilog_applySettings(rebuild_ace)
 	death_log_frame.frame:SetFrameStrata("BACKGROUND")
 	death_log_frame.frame:Lower()
 
+	local lock = deathlog_settings[widget_name]["lock"] == true
+	death_log_frame:EnableResize(not lock)
+
 	-- Match icon frame strata so its children (entries) at higher frame levels
 	-- get click priority over the icon frame in the overlap region.
 	death_log_icon_frame:SetFrameStrata("BACKGROUND")
@@ -1050,6 +1053,7 @@ options = {
 					deathlog_settings[widget_name]["lock"] = true
 				end
 				deathlog_settings[widget_name]["lock"] = not deathlog_settings[widget_name]["lock"]
+				Deathlog_minilog_applySettings()
 			end,
 			order = 1,
 		},
