@@ -120,6 +120,7 @@ local defaults = {
 	["size_y"] = 40,
 	["show_value"] = false,
 	["source_kind"] = Deathlog_GetDefaultSourceKind(),
+	["locked"] = false,
 }
 
 local function applyDefaults(_defaults, force)
@@ -137,6 +138,12 @@ local options = {}
 local optionsframe = nil
 function Deathlog_HIWidget_applySettings()
 	applyDefaults(defaults)
+	
+	if deathlog_settings[widget_name]["locked"] then
+		heatmap_indicator_frame:EnableMouse(false)
+	else
+		heatmap_indicator_frame:EnableMouse(true)
+	end
 
 	if deathlog_settings[widget_name]["enable"] == nil or deathlog_settings[widget_name]["enable"] == false then
 		heatmap_indicator_frame:Hide()
@@ -228,6 +235,18 @@ options = {
 			end,
 			set = function()
 				deathlog_settings[widget_name]["show_value"] = not deathlog_settings[widget_name]["show_value"]
+				Deathlog_HIWidget_applySettings()
+			end,
+		},
+		locked = {
+			type = "toggle",
+			name = "Lock Heatmap",
+			desc = "Lock the Heatmap Indicator.",
+			get = function()
+				return deathlog_settings[widget_name]["locked"]
+			end,
+			set = function()
+				deathlog_settings[widget_name]["locked"] = not deathlog_settings[widget_name]["locked"]
 				Deathlog_HIWidget_applySettings()
 			end,
 		},
