@@ -30,6 +30,9 @@ local CHANGELOG_CONTENT = [[
 
 |cFF00FF00[0.5.14] - 2026-06-15|r
 
+|cFFFFFFFFNew Features|r
+- The mini log now hides its resize handle while 'Lock position' is enabled, and the Heatmap Indicator gained a 'Lock Heatmap' option that prevents dragging (thanks to Makpptfox)
+
 |cFFFFFFFFBug Fixes|r
 - Player names with special characters (umlauts, accents, tildes, etc.) now display correctly in the mini log and the main death log
 - Russian (Cyrillic) player names now render correctly in the mini log and main death log

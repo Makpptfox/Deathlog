@@ -1,4 +1,4 @@
-local VERSION = 1779667200
+local VERSION = 1781481600
 
 if DeathlogData and (DeathlogData.VERSION or 0) >= VERSION then return end
 

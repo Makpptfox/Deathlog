@@ -4,6 +4,9 @@ All notable changes to Deathlog will be documented in this file.
 
 ## [0.5.14] - 2026-06-15
 
+### New Features
+- The mini log now hides its resize/scaling handle while "Lock position" is enabled, and the Heatmap Indicator gained a "Lock Heatmap" option that prevents it from being dragged. (Thanks to Makpptfox)
+
 ### Bug Fixes
 - Player names with special characters (umlauts, accents, tildes, etc.) now display correctly in the mini log and the main death log. The western locale fonts (English, German, French, Spanish, Italian, Portuguese) were switched from a Chinese font that lacked extended-Latin glyphs to `FRIZQT__.TTF`, which has full coverage.
 - Russian (Cyrillic) player names — which can appear on western servers — now render correctly in the mini log and main death log via an automatic per-name swap to a Cyrillic-capable font.
