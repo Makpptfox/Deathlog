@@ -1,7 +1,7 @@
 local _dnl = DeathNotificationLib.Internal ---@class _dnl
 if not _dnl then return end
 _dnl.L.en.STRINGS = {
-    death_alert_font = "Fonts\\blei00d.TTF",
+    death_alert_font = "Fonts\\FRIZQT__.TTF",
     death_alert_default_message = "<name>( the <race> <class>)[ of <guild>] has been slain\nby <source>[ at lvl <level>][ in <zone>].",
     death_alert_default_fall_message = "<name>( the <race> <class>) fell to\ndeath[ at lvl <level>][ in <zone>].",
     death_alert_default_drown_message = "<name>( the <race> <class>) drowned\n[ at lvl <level>][ in <zone>].",

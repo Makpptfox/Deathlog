@@ -10,6 +10,79 @@ local class_bg_tex = nil
 
 local main_font = Deathlog_L.main_font
 
+-- Many of the bundled decorative fonts (and some locale defaults) do not contain
+-- glyphs for extended-Latin / accented characters (e.g. ö, ü, é, ñ), so names with
+-- special characters render as empty boxes. STANDARD_TEXT_FONT is provided by
+-- Blizzard's GameFonts.xml and is guaranteed to have full glyph coverage for the
+-- active client locale. Use it as a fallback whenever a requested font fails to load.
+--
+-- FRIZQT__.TTF (the western default/fallback) renders noticeably larger than the
+-- old blei00d.TTF default at the same point size, which made the minilog rows look
+-- oversized. Compensate by scaling FRIZQT down so it matches the previous visual
+-- size at any user-configured point size, without changing the size slider's value.
+local DEATHLOG_FRIZQT_SCALE = 0.85
+local function Deathlog_NormalizeFontSize(font_path, font_size)
+	if type(font_path) == "string" and font_path:find("FRIZQT__", 1, true) then
+		return math.max(1, math.floor(font_size * DEATHLOG_FRIZQT_SCALE + 0.5))
+	end
+	return font_size
+end
+
+-- FRIZQT__.TTF has no Cyrillic glyphs, so Russian names (which appear on western
+-- servers too) render as boxes. FRIZQT___CYR.TTF ships on all western clients and
+-- covers Latin + Cyrillic, so swap to it only for names that actually contain
+-- Cyrillic. Detection is a single C-level byte scan: Cyrillic (U+0400–U+04FF) is
+-- encoded in UTF-8 with lead byte 0xD0 (208) or 0xD1 (209), so a name containing
+-- one of those bytes is treated as Cyrillic. This is cheap and runs per rendered
+-- name without iterating the whole string in Lua.
+local DEATHLOG_CYRILLIC_FONT = "Fonts\\FRIZQT___CYR.TTF"
+local function Deathlog_TextHasCyrillic(text)
+	return type(text) == "string" and text:find("[\208\209]") ~= nil
+end
+
+local function Deathlog_SetFontWithFallback(font_string, font_path, font_size, font_flags)
+	if font_string == nil then
+		return font_path
+	end
+	local ok = font_string:SetFont(font_path, Deathlog_NormalizeFontSize(font_path, font_size), font_flags or "")
+	if not ok then
+		local fallback = STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
+		font_string:SetFont(fallback, Deathlog_NormalizeFontSize(fallback, font_size), font_flags or "")
+		return fallback
+	end
+	return font_path
+end
+
+-- Apply font to a fontstring, swapping to a Cyrillic-capable font when the text to
+-- be displayed contains Cyrillic. Only calls SetFont when the script class of the
+-- text changes (tracked via `_dl_cyrillic`), so repeated renders of the same kind
+-- of name are essentially free.
+local function Deathlog_ApplyFontForText(font_string, text, font_path, font_size, font_flags)
+	if font_string == nil then
+		return font_path
+	end
+	local needs_cyrillic = Deathlog_TextHasCyrillic(text)
+	-- Fast path: nothing relevant changed since last apply.
+	if font_string._dl_cyrillic == needs_cyrillic
+		and font_string._dl_font == font_path
+		and font_string._dl_size == font_size
+	then
+		return font_string._dl_applied or font_path
+	end
+	font_string._dl_cyrillic = needs_cyrillic
+	font_string._dl_font = font_path
+	font_string._dl_size = font_size
+	local applied
+	if needs_cyrillic then
+		font_string:SetFont(DEATHLOG_CYRILLIC_FONT, Deathlog_NormalizeFontSize(DEATHLOG_CYRILLIC_FONT, font_size), font_flags or "")
+		applied = DEATHLOG_CYRILLIC_FONT
+	else
+		applied = Deathlog_SetFontWithFallback(font_string, font_path, font_size, font_flags)
+	end
+	font_string._dl_applied = applied
+	return applied
+end
+
 local tmap = {
 	["WARRIOR"] = { 0, 0.25, 0, 0.25 },
 	["MAGE"] = { 0.25, 0.5, 0, 0.25 },
@@ -155,7 +228,7 @@ local death_log_frame = AceGUI:Create(minilog_type) ---@type DeathlogMiniLog
 death_log_frame.frame:SetMovable(false)
 death_log_frame.frame:EnableMouse(false)
 death_log_frame:SetTitle("Deathlog")
-death_log_frame.titletext:SetFont(Deathlog_L.mini_log_font, 19, "THICKOUTLINE")
+Deathlog_SetFontWithFallback(death_log_frame.titletext, Deathlog_L.mini_log_font, 19, "THICKOUTLINE")
 
 Deathlog_createInfoButton(death_log_frame, true, 28, -2)
 
@@ -368,6 +441,12 @@ death_log_frame:AddChild(scroll_frame)
 local selected = nil
 local row_entry = {}
 local loaded = false
+-- Cached resolved entry font/size so per-entry rendering (setEntry) can pick the
+-- right font (incl. Cyrillic swap) without re-reading settings on every call.
+-- Kept in sync by applyFont().
+local current_entry_font_path = default_font
+local current_entry_font_size = 14
+local current_entry_font_flags = ""
 local function setupRowEntries()
 	loaded = true
 	row_entry = {}
@@ -489,7 +568,7 @@ local function setupRowEntries()
 				_entry.font_strings[v[1]]:SetWidth(v[2])
 			end
 			_entry.font_strings[v[1]]:SetTextColor(1, 1, 1)
-			_entry.font_strings[v[1]]:SetFont(Deathlog_L.mini_log_font, 14, "")
+			Deathlog_SetFontWithFallback(_entry.font_strings[v[1]], Deathlog_L.mini_log_font, 14, "")
 		end
 
 		_entry.background = _entry.frame:CreateTexture(nil, "OVERLAY")
@@ -571,7 +650,10 @@ end
 local function setEntry(player_data, _entry)
 	_entry.player_data = player_data
 	for _, v in ipairs(subtitle_data) do
-		_entry.font_strings[v[1]]:SetText(v[3](_entry))
+		local fs = _entry.font_strings[v[1]]
+		local text = v[3](_entry)
+		fs:SetText(text)
+		Deathlog_ApplyFontForText(fs, text, current_entry_font_path, current_entry_font_size, current_entry_font_flags)
 	end
 end
 
@@ -786,13 +868,14 @@ local function applyFont()
 	local ws = deathlog_settings[widget_name]
 	if ws == nil then return end
 	local title_font_path = fonts[ws["font"]] or default_font
-	death_log_frame.titletext:SetFont(
+	local applied_title_font = Deathlog_SetFontWithFallback(
+		death_log_frame.titletext,
 		title_font_path,
 		ws["title_font_size"] or 19,
 		"THICKOUTLINE"
 	)
 
-	if title_font_path ~= death_log_frame.titletext:GetFont() then
+	if applied_title_font ~= death_log_frame.titletext:GetFont() then
 		success = false
 	end
 	death_log_frame.titletext:SetTextColor(
@@ -810,15 +893,21 @@ local function applyFont()
 	)
 
 	local entry_font_path = fonts[ws["entry_font"]] or default_font
+	local entry_font_size = ws["entry_font_size"] or 14
+	-- Cache for per-entry rendering (setEntry) so it can match font + Cyrillic swap.
+	current_entry_font_path = entry_font_path
+	current_entry_font_size = entry_font_size
+	current_entry_font_flags = ""
 	for i = 1, 20 do
 		for idx, v in ipairs(subtitle_data) do
-			row_entry[i].font_strings[v[1]]:SetFont(
-				entry_font_path,
-				ws["entry_font_size"] or 14,
-				""
-			)
+			local fs = row_entry[i].font_strings[v[1]]
+			local text = fs:GetText()
+			local applied_entry_font = Deathlog_ApplyFontForText(fs, text, entry_font_path, entry_font_size, "")
 
-			if entry_font_path ~= row_entry[i].font_strings[v[1]]:GetFont() then
+			-- Verify the actually-applied font (Cyrillic swap or load-failure
+			-- fallback included) matches what the fontstring reports, so the retry
+			-- ticker can terminate.
+			if applied_entry_font ~= fs:GetFont() then
 				success = false
 			end
 		end

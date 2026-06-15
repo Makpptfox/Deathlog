@@ -40,6 +40,24 @@ local total_pages = 1
 
 local main_font = Deathlog_L.main_font
 
+-- main_font (FRIZQT__.TTF on western clients) has no Cyrillic glyphs, so Russian
+-- player names render as boxes in the main log. FRIZQT___CYR.TTF ships on all
+-- western clients and covers Latin + Cyrillic. Detect Cyrillic via a single
+-- C-level byte scan (UTF-8 lead bytes 0xD0/0xD1 = U+0400–U+04FF) and swap the
+-- font only for those names. State is tracked per fontstring so SetFont is only
+-- called when the script class of the text changes.
+local DEATHLOG_CYRILLIC_FONT = "Fonts\\FRIZQT___CYR.TTF"
+local function Deathlog_menuApplyFontForText(font_string, text, font_path, font_size)
+	if font_string == nil then return end
+	local needs_cyrillic = type(text) == "string" and text:find("[\208\209]") ~= nil
+	if font_string._dl_cyrillic == needs_cyrillic and font_string._dl_font == font_path then
+		return
+	end
+	font_string._dl_cyrillic = needs_cyrillic
+	font_string._dl_font = font_path
+	font_string:SetFont(needs_cyrillic and DEATHLOG_CYRILLIC_FONT or font_path, font_size, "")
+end
+
 local deathlog_tabcontainer ---@type AceGUIDeathlogTabGroup
 local deathlog_cta_banner ---@type any
 
@@ -442,7 +460,10 @@ local function displayPageFromCache()
 			break
 		end
 		for _, col in ipairs(subtitle_data) do
-			font_strings[i][col[1]]:SetText(col[3](ordered[idx], ""))
+			local fs = font_strings[i][col[1]]
+			local text = col[3](ordered[idx], "")
+			fs:SetText(text)
+			Deathlog_menuApplyFontForText(fs, text, main_font, 10)
 		end
 		if ordered[idx] and ordered[idx].map_id then
 			font_strings[i].map_id = ordered[idx].map_id
@@ -494,7 +515,10 @@ local function setDeathlogMenuLogData(data)
 			break
 		end
 		for _, col in ipairs(subtitle_data) do
-			font_strings[i][col[1]]:SetText(col[3](ordered[idx], ""))
+			local fs = font_strings[i][col[1]]
+			local text = col[3](ordered[idx], "")
+			fs:SetText(text)
+			Deathlog_menuApplyFontForText(fs, text, main_font, 10)
 		end
 		if ordered[idx] and ordered[idx].map_id then
 			font_strings[i].map_id = ordered[idx].map_id

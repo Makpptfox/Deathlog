@@ -28,6 +28,15 @@ local NO_CHANGELOG_VERSIONS = {
 local CHANGELOG_CONTENT = [[
 |cFFFFD700Deathlog Changelog|r
 
+|cFF00FF00[0.5.14] - 2026-06-15|r
+
+|cFFFFFFFFBug Fixes|r
+- Player names with special characters (umlauts, accents, tildes, etc.) now display correctly in the mini log and the main death log
+- Russian (Cyrillic) player names now render correctly in the mini log and main death log
+
+|cFFFFFFFFImprovements|r
+- The mini log font no longer appears oversized after the font fix; its size now matches the previous appearance
+
 |cFF00FF00[0.5.13] - 2026-05-25|r
 
 |cFFFFFFFFNew Features|r

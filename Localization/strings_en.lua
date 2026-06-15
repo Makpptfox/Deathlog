@@ -1,10 +1,10 @@
 DEATHLOG_STRINGS_EN = {
 	-- fonts
 	main_font = "Fonts\\FRIZQT__.TTF",
-	class_font = "Fonts\\blei00d.TTF",
-	mini_log_font = "Fonts\\blei00d.TTF",
-	menu_font = "Fonts\\blei00d.TTF",
-	deadliest_creature_container_font = "Fonts\\blei00d.TTF",
+	class_font = "Fonts\\FRIZQT__.TTF",
+	mini_log_font = "Fonts\\FRIZQT__.TTF",
+	menu_font = "Fonts\\FRIZQT__.TTF",
+	deadliest_creature_container_font = "Fonts\\FRIZQT__.TTF",
 	creature_model_quote_font = "Fonts\\MORPHEUS.TTF",
 	-- words
 	minimap_btn_left_click = "|cFF666666Left Click:|r Toggle log",

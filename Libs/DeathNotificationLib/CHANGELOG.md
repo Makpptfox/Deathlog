@@ -1,5 +1,10 @@
 # Changelog
 
+## V19 — 2026-06-15
+
+### Bug Fixes
+- Death alert now renders special characters (umlauts, accents, etc.) correctly on western clients: the death alert font for the western locales (English, German, French, Spanish, Italian, Portuguese) was switched from a Chinese font (`blei00d.TTF`, which lacks extended-Latin glyphs) to `FRIZQT__.TTF`.
+
 ## V18 — 2026-05-25
 
 ### Changes

@@ -2,7 +2,7 @@
 DeathNotificationLib~Init.lua
 --]]
 
-local VERSION = 18
+local VERSION = 19
 
 if DeathNotificationLib and (DeathNotificationLib.VERSION or 0) >= VERSION then return end
 

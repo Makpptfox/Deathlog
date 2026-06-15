@@ -2,6 +2,15 @@
 
 All notable changes to Deathlog will be documented in this file.
 
+## [0.5.14] - 2026-06-15
+
+### Bug Fixes
+- Player names with special characters (umlauts, accents, tildes, etc.) now display correctly in the mini log and the main death log. The western locale fonts (English, German, French, Spanish, Italian, Portuguese) were switched from a Chinese font that lacked extended-Latin glyphs to `FRIZQT__.TTF`, which has full coverage.
+- Russian (Cyrillic) player names — which can appear on western servers — now render correctly in the mini log and main death log via an automatic per-name swap to a Cyrillic-capable font.
+
+### Improvements
+- The mini log font no longer appears oversized after the font change; its rendered size now matches the previous appearance.
+
 ## [0.5.13] - 2026-05-25
 
 ### New Features
