@@ -199,8 +199,11 @@ local function WPDropDownDemo_Menu(frame, level, menuList)
 		if not canOpenWorldMap() then
 			return
 		end
+		
+		if not WorldMapFrame:IsShown() then
+			ToggleFrame(WorldMapFrame)
+		end
 
-		WorldMapFrame:SetShown(not WorldMapFrame:IsShown())
 		WorldMapFrame:SetMapID(death_tomb_frame.map_id)
 		WorldMapFrame:GetCanvas()
 		local mWidth, mHeight = WorldMapFrame:GetCanvas():GetSize()
@@ -273,7 +276,11 @@ local subtitle_data = {
 		"Date",
 		105,
 		function(_entry, _server_name)
-			return date("%m/%d/%y, %H:%M", _entry["date"]) or ""
+			if deathlog_settings and deathlog_settings["european_date_format"] then
+				return date("%d/%m/%y, %H:%M", _entry["date"]) or ""
+			else
+				return date("%m/%d/%y, %H:%M", _entry["date"]) or ""
+			end
 		end,
 	},
 	{
@@ -467,11 +474,16 @@ local function displayPageFromCache()
 		end
 		if ordered[idx] and ordered[idx].map_id then
 			font_strings[i].map_id = ordered[idx].map_id
+		else
+			font_strings[i].map_id = nil
 		end
 		if ordered[idx] and ordered[idx].map_pos then
-			local x, y = strsplit(",", ordered[idx].map_pos, 2)
+			local x, y = Deathlog_parseMapPos(ordered[idx].map_pos)
 			font_strings[i].map_id_coords_x = x
 			font_strings[i].map_id_coords_y = y
+		else
+			font_strings[i].map_id_coords_x = nil
+			font_strings[i].map_id_coords_y = nil
 		end
 	end
 
@@ -522,11 +534,16 @@ local function setDeathlogMenuLogData(data)
 		end
 		if ordered[idx] and ordered[idx].map_id then
 			font_strings[i].map_id = ordered[idx].map_id
+		else
+			font_strings[i].map_id = nil
 		end
 		if ordered[idx] and ordered[idx].map_pos then
-			local x, y = strsplit(",", ordered[idx].map_pos, 2)
+			local x, y = Deathlog_parseMapPos(ordered[idx].map_pos)
 			font_strings[i].map_id_coords_x = x
 			font_strings[i].map_id_coords_y = y
+		else
+			font_strings[i].map_id_coords_x = nil
+			font_strings[i].map_id_coords_y = nil
 		end
 	end
 

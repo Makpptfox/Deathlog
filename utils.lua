@@ -1600,7 +1600,11 @@ function Deathlog_setTooltipFromEntry(_entry)
 	local _loc = _entry["map_pos"]
 	local _date = nil
 	if _entry["date"] then
-		_date = date("%m/%d/%y", _entry["date"])
+		if deathlog_settings and deathlog_settings["european_date_format"] then
+			_date = date("%d/%m/%y", _entry["date"])
+	else
+			_date = date("%m/%d/%y", _entry["date"])
+	end
 	end
 	local _playtime = DeathNotificationLib.FormatPlaytime(_entry["played"])
 	local _last_words = nil

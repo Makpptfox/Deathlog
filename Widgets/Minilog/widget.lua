@@ -470,8 +470,11 @@ local function setupRowEntries()
 			if not canOpenWorldMap() then
 				return
 			end
+			
+			if not WorldMapFrame:IsShown() then
+				ToggleFrame(WorldMapFrame)
+			end
 
-			WorldMapFrame:SetShown(not WorldMapFrame:IsShown())
 			WorldMapFrame:SetMapID(death_tomb_frame.map_id)
 			WorldMapFrame:GetCanvas()
 			local mWidth, mHeight = WorldMapFrame:GetCanvas():GetSize()
@@ -621,7 +624,12 @@ local function setupRowEntries()
 				end
 			elseif click_type == "RightButton" then
 				death_tomb_frame.map_id = _entry["player_data"]["map_id"]
-				death_tomb_frame.coordinates = Deathlog_parseMapPos(_entry["player_data"]["map_pos"])
+				local x, y = Deathlog_parseMapPos(_entry["player_data"]["map_pos"])
+                if x and y then
+                    death_tomb_frame.coordinates = {x, y}
+                else
+                    death_tomb_frame.coordinates = nil
+                end
 				death_tomb_frame.clicked_name = _entry["player_data"]["name"]
 				
 				if not _G["WPDemoContextMenu"] then
