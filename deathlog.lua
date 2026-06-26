@@ -757,6 +757,19 @@ local options = {
 				deathlog_settings["auto_refresh_search"] = not deathlog_settings["auto_refresh_search"]
 			end,
 		},
+		european_date_format = {
+		type = "toggle",
+		name = "Use DD/MM/YYYY date format",
+		desc = "Display dates as DD/MM/YY instead of MM/DD/YY.",
+		width = 1.3,
+		order = 56,
+		get = function()
+			return not not deathlog_settings["european_date_format"]
+		end,
+		set = function()
+			deathlog_settings["european_date_format"] = not deathlog_settings["european_date_format"]
+		end,
+		},
 		prediction_radius = {
 			type = "range",
 			name = "Source prediction radius",
