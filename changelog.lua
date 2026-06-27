@@ -28,6 +28,18 @@ local NO_CHANGELOG_VERSIONS = {
 local CHANGELOG_CONTENT = [[
 |cFFFFD700Deathlog Changelog|r
 
+|cFF00FF00[0.5.15] - 2026-06-27|r
+
+|cFFFFFFFFNew Features|r
+- Added a settings toggle to display dates in DD/MM/YY (European) format instead of MM/DD/YY (thanks to Makpptfox)
+- Added a 'Sound Channel' option for death alerts; set it to 'Master' (new default) to keep alerts audible regardless of your Sound Effects volume
+
+|cFFFFFFFFBug Fixes|r
+- The world map can now be closed with the ESC key (thanks to Makpptfox)
+- Fixed the 'Show death location' button in the mini log right-click menu (thanks to Makpptfox)
+- Death entries with missing location data no longer reuse the previous entry's map pin (thanks to Makpptfox)
+- Fixed the Watch List remove (X) button being hard to click; the whole X column is now clickable, and blank rows are no longer created
+
 |cFF00FF00[0.5.14] - 2026-06-15|r
 
 |cFFFFFFFFNew Features|r

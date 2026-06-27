@@ -5,7 +5,7 @@
 ## Author: Deathwing
 ## X-License: GNU GPL3
 ## X-Category: Library
-## Version: 19
+## Version: 20
 # DEATHLOG_UNCOMMENT_NEXT_LINE
 # ## OptionalDeps: DeathNotificationLibData
 

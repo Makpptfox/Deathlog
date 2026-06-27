@@ -350,10 +350,16 @@ function watch_list_frame.updateMenuElement(scroll_frame)
 			watch_list_frame.updateMenuElement(scroll_frame)
 		else
 			local old_name = font_strings[selected_entry] and font_strings[selected_entry].name
+			local _name = watch_list_frame.name_box:GetText():gsub("^%s+", ""):gsub("%s+$", "")
+			_name = _name:gsub("^%l", string.upper)
+			-- Don't create blank/placeholder watch list rows; just refresh.
+			if _name == "" or _name == "<Click to add>" then
+				watch_list_frame.updateMenuElement(scroll_frame)
+				return
+			end
 			if old_name then
 				deathlog_watchlist_entries[old_name] = nil
 			end
-			local _name = watch_list_frame.name_box:GetText():gsub("^%l", string.upper)
 			deathlog_watchlist_entries[_name] = {
 				["Name"] = _name,
 				["Icon"] = "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcon_7:16:16:0:0:64:64:|t",
@@ -466,10 +472,6 @@ function watch_list_frame.updateMenuElement(scroll_frame)
 				local note_left = font_strings[i]["Note"]:GetLeft() - _entry:GetLeft()
 				local icon_left = font_strings[i]["Icon"]:GetLeft() - _entry:GetLeft()
 				local remove_left = font_strings[i]["Remove"]:GetLeft() - _entry:GetLeft()
-				local remove_width = font_strings[i]["Remove"]:GetStringWidth() or 0
-				if remove_width <= 0 then
-					remove_width = 16
-				end
 				if pos_x < note_left then
 					edit_box_type = 0
 					local function setEditBox(other)
@@ -530,9 +532,13 @@ function watch_list_frame.updateMenuElement(scroll_frame)
 					)
 					watch_list_frame.icon_dd:Show()
 					UIDropDownMenu_SetWidth(watch_list_frame.icon_dd, 50)
-				elseif pos_x >= remove_left and pos_x < (remove_left + remove_width) then
-					if deathlog_watchlist_entries and deathlog_watchlist_entries[font_strings[i].name] then
-						deathlog_watchlist_entries[font_strings[i].name] = nil
+				elseif pos_x >= remove_left then
+					-- Remove is the last actionable column; treat clicks from
+					-- the X icon to the row's right edge as a remove so the
+					-- small X texture is reliably clickable.
+					local remove_name = font_strings[i].name
+					if remove_name ~= nil and deathlog_watchlist_entries[remove_name] then
+						deathlog_watchlist_entries[remove_name] = nil
 						watch_list_frame.updateMenuElement(
 							scroll_frame
 						)

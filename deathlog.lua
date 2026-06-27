@@ -29,6 +29,14 @@ local function initVariables()
 	deathlog_data = deathlog_data or {}
 	deathlog_data_map = deathlog_data_map or {}
 	deathlog_watchlist_entries = deathlog_watchlist_entries or {}
+	-- Prune stale blank/whitespace-only watch list keys that could be
+	-- created by older versions; these rendered an empty, unremovable row.
+	for _key, _val in pairs(deathlog_watchlist_entries) do
+		local _trimmed = type(_key) == "string" and _key:gsub("%s+", "") or ""
+		if type(_key) ~= "string" or _trimmed == "" then
+			deathlog_watchlist_entries[_key] = nil
+		end
+	end
 	deathlog_record_econ_stats = deathlog_record_econ_stats or {}
 	deathlog_entry_counts = deathlog_entry_counts or {}
 	deathlog_purged = deathlog_purged or {}

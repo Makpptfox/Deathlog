@@ -2,6 +2,18 @@
 
 All notable changes to Deathlog will be documented in this file.
 
+## [0.5.15] - 2026-06-27
+
+### New Features
+- Added a settings toggle to display dates in DD/MM/YY (European) format instead of MM/DD/YY. (Thanks to Makpptfox)
+- Added a "Sound Channel" option for death alerts. Setting it to "Master" (the new default) keeps alerts audible regardless of your in-game Sound Effects volume.
+
+### Bug Fixes
+- The world map can now be closed with the ESC key. (Thanks to Makpptfox)
+- Fixed the "Show death location" button in the mini log right-click menu, which failed to place the map pin due to map coordinates not being parsed correctly. (Thanks to Makpptfox)
+- Death entries with missing location data no longer reuse the previous entry's map pin. (Thanks to Makpptfox)
+- Fixed the Watch List remove (X) button being difficult or impossible to click; the entire X column is now clickable. Blank watch list rows can no longer be created and existing empty entries are cleaned up automatically.
+
 ## [0.5.14] - 2026-06-15
 
 ### New Features

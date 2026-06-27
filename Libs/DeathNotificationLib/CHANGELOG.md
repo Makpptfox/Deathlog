@@ -1,5 +1,10 @@
 # Changelog
 
+## V20 — 2026-06-27
+
+### New Features
+- **Death alert sound channel** — `DNL_DeathAlertSettings` now has a `sound_channel` field ("Master"|"SFX"|"Ambience"|"Music"|"Dialog", default "Master") and a matching "Sound Channel" dropdown in the Death Alert options. Playing through "Master" lets the alert ignore the in-game Sound Effects slider so it stays audible at a fixed volume.
+
 ## V19 — 2026-06-15
 
 ### Bug Fixes

@@ -165,6 +165,9 @@ local defaults = {
 	["accent_color_a"]      = 1,
 	["current_zone_filter"] = false,
 	["alert_sound"]         = "default_hardcore",
+	-- Audio channel the alert plays through. "Master" ignores the in-game
+	-- Sound Effects slider so the alert can stay audible at a fixed volume.
+	["sound_channel"]       = "Master",
 	["alertFilter"]         = nil,
 }
 
@@ -224,7 +227,7 @@ end)
 -- Guild filter now handled by DeathNotificationLib~GuildFilter.lua
 
 -- ── random sound ─────────────────────────────────────────────────────
-local function PlayRandomSound()
+local function PlayRandomSound(channel)
 	local paths = {}
 	for k, v in pairs(sounds) do
 		if type(v) == "string" and k ~= "random" and v ~= "random" then
@@ -232,7 +235,7 @@ local function PlayRandomSound()
 		end
 	end
 	if #paths > 0 then
-		PlaySoundFile(paths[math.random(1, #paths)])
+		PlaySoundFile(paths[math.random(1, #paths)], channel)
 	end
 end
 
@@ -497,12 +500,13 @@ function _dnl.playDeathAlert(entry)
 
 	-- Sound
 	if s["enable_sound"] then
+		local channel = s["sound_channel"] or "Master"
 		if s["alert_sound"] == "default_hardcore" then
-			PlaySound(8959)
+			PlaySound(8959, channel)
 		elseif s["alert_sound"] == "random" then
-			PlayRandomSound()
+			PlayRandomSound(channel)
 		else
-			PlaySoundFile(sounds[s["alert_sound"]])
+			PlaySoundFile(sounds[s["alert_sound"]], channel)
 		end
 	end
 
@@ -936,6 +940,19 @@ function _dnl.applyDeathAlertSettings()
 						values = sounds,
 						get = function() return S()["alert_sound"] end,
 						set = function(_, key) S()["alert_sound"] = key; _dnl.applyDeathAlertSettings() end,
+					},
+					da_sound_channel = {
+						type = "select", name = "Sound Channel",
+						desc = "Which audio channel the alert plays through. 'Master' ignores the Sound Effects slider, so you can keep effects low and still hear death alerts.",
+						values = {
+							["Master"] = "Master",
+							["SFX"] = "Sound Effects",
+							["Ambience"] = "Ambience",
+							["Music"] = "Music",
+							["Dialog"] = "Dialog",
+						},
+						get = function() return S()["sound_channel"] or "Master" end,
+						set = function(_, key) S()["sound_channel"] = key; _dnl.applyDeathAlertSettings() end,
 					},
 					position = {
 						type = "group", name = "Position", inline = true, order = -1,
